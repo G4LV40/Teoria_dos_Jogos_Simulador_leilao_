@@ -1,0 +1,1891 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline' blob:; worker-src blob:; style-src 'unsafe-inline'; img-src data: blob:; connect-src 'none'; font-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Simulador de Leilão de Cafés</title>
+<style>:root{
+  color-scheme: light;
+  --bg:#f4f4f2; --surface:#fcfcfb; --surface-2:#f0efec; --border:#dddcd7;
+  --text:#0b0b0b; --text-2:#52514e; --muted:#76746f;
+  --accent:#2a78d6; --accent-ink:#1c5cab; --accent-soft:#cde2fb;
+  --series-1:#2a78d6; --series-2:#eb6834; --series-3:#1baf7a;
+  --band:#b7d3f6; --ci:#c2410c; --grid:#e6e5e1; --axis:#9a9893;
+  --seq-0:#eef5fd; --seq-1:#0d366b;
+  --good:#0ca30c; --warn:#b77900; --crit:#d03b3b;
+  --warn-bg:#fff6e0; --crit-bg:#fdecec; --good-bg:#e8f6e8; --info-bg:#eaf2fc;
+  --o-inf:#1c5cab; --o-hip:#8a5a00; --o-est:#5b4bbf;
+  --shadow:0 1px 2px rgba(0,0,0,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#383835;
+    --text:#f0efec; --text-2:#c3c2b7; --muted:#9a998f;
+    --accent:#3987e5; --accent-ink:#86b6ef; --accent-soft:#1c3a63;
+    --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+    --band:#1f4a80; --ci:#f08a5d; --grid:#2c2c2a; --axis:#6e6d68;
+    --seq-0:#1d2633; --seq-1:#86b6ef;
+    --warn:#fab219; --warn-bg:#3a2e10; --crit-bg:#3d1c1c; --good-bg:#16301a; --info-bg:#172638;
+    --o-inf:#86b6ef; --o-hip:#f2c46b; --o-est:#b1a8f0;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#121211; --surface:#1a1a19; --surface-2:#242422; --border:#383835;
+  --text:#f0efec; --text-2:#c3c2b7; --muted:#9a998f;
+  --accent:#3987e5; --accent-ink:#86b6ef; --accent-soft:#1c3a63;
+  --series-1:#3987e5; --series-2:#d95926; --series-3:#199e70;
+  --band:#1f4a80; --ci:#f08a5d; --grid:#2c2c2a; --axis:#6e6d68;
+  --seq-0:#1d2633; --seq-1:#86b6ef;
+  --warn:#fab219; --warn-bg:#3a2e10; --crit-bg:#3d1c1c; --good-bg:#16301a; --info-bg:#172638;
+  --o-inf:#86b6ef; --o-hip:#f2c46b; --o-est:#b1a8f0;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;}
+h1,h2,h3,h4{line-height:1.25;margin:0 0 .5em}
+h1{font-size:1.35rem;font-weight:650}
+h2{font-size:1.1rem;font-weight:650;margin-top:.2em}
+h3{font-size:.98rem;font-weight:650}
+p{margin:.35em 0 .7em}
+a{color:var(--accent-ink)}
+code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.92em}
+.wrap{max-width:1280px;margin:0 auto;padding:0 16px}
+header.top{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+header.top .wrap{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding-top:10px;padding-bottom:8px}
+.brand{flex:1 1 320px;min-width:0}
+.brand small{color:var(--text-2);display:block;font-size:.82rem}
+.statusbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:.82rem}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 10px;border-radius:999px;border:1px solid var(--border);background:var(--surface-2);white-space:nowrap}
+.pill.ok{background:var(--good-bg);border-color:transparent}
+.pill.run{background:var(--info-bg);border-color:transparent}
+.pill.stale{background:var(--warn-bg);border-color:transparent}
+.pill.err{background:var(--crit-bg);border-color:transparent}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;display:inline-block}
+.pill.ok .dot{color:var(--good)} .pill.run .dot{color:var(--accent)} .pill.stale .dot{color:var(--warn)} .pill.err .dot{color:var(--crit)}
+.progress{width:160px;height:8px;background:var(--surface-2);border-radius:4px;overflow:hidden;border:1px solid var(--border)}
+.progress>div{height:100%;width:0;background:var(--accent);transition:width .15s}
+nav.tabs{display:flex;gap:2px;overflow-x:auto;border-top:1px solid var(--border);}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:9px 14px;font:inherit;color:var(--text-2);cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent);font-weight:600}
+nav.tabs button:hover{color:var(--text)}
+main{padding:16px 0 60px}
+section.tab{display:none} section.tab.on{display:block}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card>h2:first-child{margin-top:0}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,520px),1fr));gap:14px}
+.ctl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:10px 18px}
+.ctl{border:1px solid var(--border);border-radius:8px;padding:8px 10px;background:var(--surface)}
+.ctl.bad{border-color:var(--crit)}
+.ctl .lab{display:flex;justify-content:space-between;gap:6px;align-items:baseline}
+.ctl .lab label{font-weight:600;font-size:.88rem}
+.ctl .desc{color:var(--text-2);font-size:.78rem;margin:2px 0 4px}
+.ctl .row{display:flex;gap:8px;align-items:center}
+.ctl input[type=range]{flex:1;min-width:0;accent-color:var(--accent)}
+.ctl input[type=number],.ctl select,input.txt,select.txt{font:inherit;font-size:.88rem;padding:3px 6px;border:1px solid var(--border);border-radius:6px;background:var(--surface);color:var(--text)}
+.ctl input[type=number]{width:96px}
+.ctl select{width:100%}
+.ctl .unit{color:var(--muted);font-size:.78rem;white-space:nowrap}
+.ctl .lim{color:var(--muted);font-size:.72rem;margin-top:2px}
+.ctl .msg{color:var(--crit);font-size:.75rem}
+.ctl.disabled{opacity:.5}
+.orig{font-size:.68rem;padding:1px 7px;border-radius:999px;border:1px solid currentColor;white-space:nowrap;font-weight:600}
+.orig.informado{color:var(--o-inf)} .orig.hipotese{color:var(--o-hip)} .orig.estimado{color:var(--o-est)}
+details.adv{margin-top:12px;border-top:1px dashed var(--border);padding-top:8px}
+details.adv>summary{cursor:pointer;font-weight:600;color:var(--text-2);padding:4px 0}
+.btn{font:inherit;font-size:.86rem;border:1px solid var(--border);background:var(--surface);color:var(--text);padding:5px 11px;border-radius:7px;cursor:pointer;white-space:nowrap}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.small{font-size:.76rem;padding:2px 8px}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.toolbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.note{background:var(--info-bg);border-radius:8px;padding:8px 12px;font-size:.85rem;margin:8px 0}
+.note.warn{background:var(--warn-bg)} .note.crit{background:var(--crit-bg)} .note.good{background:var(--good-bg)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,210px),1fr));gap:10px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px}
+.kpi .k-l{color:var(--text-2);font-size:.78rem}
+.kpi .k-v{font-size:1.25rem;font-weight:650;font-variant-numeric:tabular-nums}
+.kpi .k-s{color:var(--muted);font-size:.74rem;font-variant-numeric:tabular-nums}
+.kpi.hero{border-color:var(--accent)}
+.tblwrap{overflow:auto;max-width:100%;border:1px solid var(--border);border-radius:8px}
+.tblwrap.tall{max-height:460px}
+table{border-collapse:collapse;width:100%;font-size:.82rem;font-variant-numeric:tabular-nums}
+th,td{padding:5px 8px;border-bottom:1px solid var(--grid);text-align:right;white-space:nowrap}
+th{background:var(--surface-2);position:sticky;top:0;z-index:1;font-weight:600;text-align:right}
+th.l,td.l{text-align:left}
+tr.hl td{background:var(--info-bg)}
+tr.win td{background:var(--good-bg)}
+td input.cell{width:84px;font:inherit;padding:2px 4px;border:1px solid var(--border);border-radius:4px;background:var(--surface);color:var(--text);text-align:right}
+td input.cell.l{text-align:left;width:96px}
+td input.cell.bad{border-color:var(--crit);background:var(--crit-bg)}
+.chart-card{position:relative}
+.chart-card .ch-head{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap}
+.chart-card .ch-note{color:var(--text-2);font-size:.78rem;margin:0 0 6px}
+.chart{position:relative;width:100%;min-height:120px}
+.chart svg{display:block;width:100%;height:auto}
+.tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 9px;font-size:.76rem;box-shadow:0 2px 8px rgba(0,0,0,.15);display:none;z-index:5;min-width:140px;font-variant-numeric:tabular-nums}
+.stale-zone{position:relative}
+.stale-zone.stale>.content{opacity:.35;filter:grayscale(.6);pointer-events:none;user-select:none}
+.stale-banner{display:none}
+.stale-zone.stale>.stale-banner{display:block}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:.76rem;color:var(--text-2);margin:2px 0 4px}
+.legend i{display:inline-block;width:14px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.legend i.line{height:2px;vertical-align:3px}
+.formula{font-family:"Cambria Math","STIX Two Math","Latin Modern Math",Georgia,serif;font-size:1.04rem;background:var(--surface-2);padding:8px 12px;border-radius:6px;overflow-x:auto;margin:6px 0 10px;white-space:nowrap}
+.meth h3{margin-top:1.1em}
+.meth li{margin:.25em 0}
+.err-list{color:var(--crit);font-size:.82rem;margin:4px 0;padding-left:18px}
+.tag{font-size:.7rem;padding:0 6px;border-radius:4px;background:var(--surface-2);color:var(--text-2);border:1px solid var(--border)}
+.tag.sint{background:var(--warn-bg);border-color:transparent}
+.tag.inf{background:var(--info-bg);border-color:transparent}
+.muted{color:var(--muted)}
+.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.right{margin-left:auto}
+.hidden{display:none!important}
+@media (max-width:640px){ header.top{position:static} .progress{width:90px} nav.tabs button{padding:8px 10px} }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1>Simulador de leilão beneficente de cafés especiais</h1>
+      <small>Simulação Monte Carlo transparente · valores privados com orçamento · dados de preço sintéticos e editáveis · funciona offline</small>
+    </div>
+    <div class="statusbar" aria-live="polite">
+      <span id="st-pill" class="pill"><span class="dot"></span><span id="st-text">Iniciando…</span></span>
+      <span class="pill mono" title="Identificador da configuração atual (hash de todos os parâmetros e do inventário)">config <b id="st-hash">—</b></span>
+      <div class="progress" title="Progresso da execução"><div id="st-bar"></div></div>
+      <span id="st-reps" class="muted"></span>
+      <button class="btn primary" id="btn-full">Executar análise completa</button>
+      <button class="btn" id="btn-cancel" disabled>Cancelar</button>
+    </div>
+  </div>
+  <div class="wrap">
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="cfg" aria-selected="true">1. Configuração do evento</button>
+      <button role="tab" data-tab="inv">2. Inventário das amostras</button>
+      <button role="tab" data-tab="res">3. Resultados e gráficos</button>
+      <button role="tab" data-tab="opt">4. Otimização e sensibilidade</button>
+      <button role="tab" data-tab="met">5. Metodologia e auditoria</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap">
+  <div id="global-msg"></div>
+
+  <!-- 1. CONFIGURAÇÃO -->
+  <section class="tab on" id="tab-cfg">
+    <div class="card">
+      <div class="flex"><h2>Configuração do evento</h2>
+        <div class="toolbar right">
+          <button class="btn" id="btn-reset">Restaurar valores iniciais</button>
+          <button class="btn" id="btn-save">Salvar configuração (JSON)</button>
+          <label class="btn" for="file-cfg">Carregar configuração (JSON)</label>
+          <input type="file" id="file-cfg" accept=".json,application/json" class="hidden">
+        </div>
+      </div>
+      <p class="muted">Cada controle mostra unidade, limites e a origem do valor: <span class="orig informado">informado</span> (dado pelo organizador), <span class="orig estimado">estimado</span> (faixa aproximada informada) ou <span class="orig hipotese">hipótese</span> (suposição de modelagem, editável). Os resultados são recalculados automaticamente (prévia rápida) após cada alteração.</p>
+      <div id="cfg-msg"></div>
+      <h3>Evento e participantes</h3>
+      <div class="ctl-grid" id="ctl-evento"></div>
+      <h3 style="margin-top:14px">Valores e regras do leilão</h3>
+      <div class="ctl-grid" id="ctl-valores"></div>
+      <h3 style="margin-top:14px">Custos e restrições</h3>
+      <div class="ctl-grid" id="ctl-custos"></div>
+      <details class="adv" id="adv-cfg">
+        <summary>Configurações avançadas (parâmetros técnicos)</summary>
+        <h3>Avaliações e preferências</h3>
+        <div class="ctl-grid" id="ctl-valores-adv"></div>
+        <h3 style="margin-top:14px">Participantes</h3>
+        <div class="ctl-grid" id="ctl-evento-adv"></div>
+        <h3 style="margin-top:14px">Simulação</h3>
+        <div class="ctl-grid" id="ctl-sim-adv"></div>
+      </details>
+    </div>
+    <div class="card">
+      <h2>Quatro conceitos que não devem ser confundidos</h2>
+      <div class="grid2">
+        <div><b>Orçamento (Bᵢ)</b> — quanto o participante <i>pode</i> gastar no evento inteiro. É um teto de caixa; diminui a cada compra.</div>
+        <div><b>Disposição a pagar / avaliação (Vᵢⱼ)</b> — quanto o lote <i>vale</i> para a pessoa. Pode ser maior que o saldo; nesse caso o limite de lance é o saldo.</div>
+        <div><b>Preço de reserva (r)</b> — valor mínimo fixado pelo organizador. Lances abaixo dele não são aceitos; o lote pode ficar sem venda.</div>
+        <div><b>Preço pago (p)</b> — resultado do mecanismo: no segundo preço, o 2º maior limite elegível (nunca abaixo da reserva). Normalmente menor que a avaliação do vencedor.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. INVENTÁRIO -->
+  <section class="tab" id="tab-inv">
+    <div class="card">
+      <h2>Oferta: modo, quantidade e ordem de venda</h2>
+      <div class="ctl-grid" id="ctl-oferta"></div>
+      <div id="oferta-msg"></div>
+    </div>
+    <div class="card">
+      <div class="flex"><h2>Inventário das amostras</h2>
+        <div class="toolbar right">
+          <button class="btn" id="btn-inv-add">Adicionar amostra</button>
+          <button class="btn" id="btn-inv-gen">Gerar inventário sintético</button>
+          <label class="btn" for="file-inv">Importar CSV</label>
+          <input type="file" id="file-inv" accept=".csv,text/csv,text/plain" class="hidden">
+          <button class="btn" id="btn-inv-csv">Exportar inventário (CSV)</button>
+        </div>
+      </div>
+      <div class="note warn"><b>Inventário inicial sintético.</b> Somente as notas do 1º (90 pontos) e do 10º colocado (≈86,5) e a faixa de 150–250 g foram informadas. Notas intermediárias (interpolação linear), massas (sorteio uniforme 150–250 g) e a composição de amostras por café são <b>ilustrativas</b> e estão marcadas como “sintético”. Substitua pelos dados do inventário confirmado (edite as células ou importe um CSV).</div>
+      <div class="ctl-grid" id="ctl-gerador"></div>
+      <div id="inv-msg"></div>
+      <h3 style="margin-top:12px">Resumo por café (massa disponível)</h3>
+      <div class="tblwrap"><table id="tbl-cafes"></table></div>
+      <h3 style="margin-top:12px">Amostras <span class="muted" id="inv-count"></span></h3>
+      <div class="tblwrap tall"><table id="tbl-inv"></table></div>
+      <p class="muted">CSV aceito: colunas <code>amostra_id; cafe_id; colocacao; nota; massa_g</code> e opcional <code>ordem_manual</code>. Separador “;” ou “,” e vírgula ou ponto decimal.</p>
+    </div>
+  </section>
+
+  <!-- 3. RESULTADOS -->
+  <section class="tab" id="tab-res">
+    <div class="stale-zone" id="res-zone">
+      <div class="note warn stale-banner" id="res-stale"></div>
+      <div class="content">
+        <div class="card">
+          <div class="flex"><h2>Resultados do cenário atual</h2>
+            <div class="toolbar right">
+              <button class="btn" id="btn-exp-resumo">Resumo (CSV)</button>
+              <button class="btn" id="btn-exp-varr">Varreduras (CSV)</button>
+              <button class="btn" id="btn-exp-reps">Repetições do cenário (CSV)</button>
+              <button class="btn" id="btn-exp-par">Parâmetros e semente (JSON)</button>
+            </div>
+          </div>
+          <div id="res-id" class="note"></div>
+          <div id="res-ativas"></div>
+          <div class="kpis" id="kpis"></div>
+          <details class="adv" open><summary>Tabela estatística completa</summary>
+            <div class="tblwrap"><table id="tbl-stats"></table></div>
+            <p class="muted">P10–P90: 80% centrais dos <b>eventos simulados</b> (variabilidade de um evento). IC 95%: precisão da <b>média Monte Carlo</b> (erro numérico). Nenhum dos dois inclui a incerteza sobre os parâmetros econômicos.</p>
+          </details>
+        </div>
+        <div class="grid2" id="charts"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. OTIMIZAÇÃO -->
+  <section class="tab" id="tab-opt">
+    <div class="card">
+      <h2>Otimização em grade</h2>
+      <p class="muted">Busca, em uma grade finita, a combinação de participantes, lotes e (no modo B) massa por lote com melhor objetivo, respeitando capacidade, duração, estoque e gramatura. Os melhores candidatos são revalidados com <b>semente independente</b> e mais repetições para reduzir o viés de escolher o melhor resultado por ruído.</p>
+      <div class="ctl-grid" id="ctl-otim"></div>
+      <details class="adv"><summary>Faixas e passos da busca</summary><div class="ctl-grid" id="ctl-grade"></div></details>
+      <div class="toolbar" style="margin-top:10px">
+        <button class="btn primary" id="btn-opt">Executar otimização</button>
+        <button class="btn" id="btn-opt-cancel" disabled>Cancelar</button>
+        <span class="muted" id="opt-prog"></span>
+        <button class="btn right" id="btn-exp-opt" disabled>Resultados da otimização (CSV)</button>
+      </div>
+    </div>
+    <div class="stale-zone" id="opt-zone">
+      <div class="note warn stale-banner" id="opt-stale"></div>
+      <div class="content" id="opt-out"><div class="card muted">Nenhuma otimização executada para a configuração atual.</div></div>
+    </div>
+    <div class="stale-zone" id="sens-zone">
+      <div class="note warn stale-banner" id="sens-stale"></div>
+      <div class="content">
+        <div class="card chart-card">
+          <div class="ch-head"><h2>Sensibilidade às hipóteses (um parâmetro por vez)</h2><div class="toolbar" id="sens-tools"></div></div>
+          <p class="ch-note">Variação da arrecadação líquida média em relação ao cenário atual quando cada hipótese é trocada por um valor baixo ou alto, mantendo as demais. Comparação pareada com números aleatórios comuns; barras finas = IC 95% da diferença média. Calculada na <b>análise completa</b>.</p>
+          <div id="sens-out" class="muted">Execute a análise completa para calcular a sensibilidade.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. METODOLOGIA E AUDITORIA -->
+  <section class="tab" id="tab-met">
+    <div class="card">
+      <h2>Auditoria de uma repetição completa</h2>
+      <p class="muted">Reproduz um evento simulado (uma repetição) do cenário atual, lote a lote e participante a participante, com a mesma semente. Uma repetição explica o mecanismo; não representa a média.</p>
+      <div class="toolbar">
+        <label>Repetição nº <input type="number" class="txt" id="aud-rep" value="0" min="0" max="99999" step="1" style="width:90px"></label>
+        <button class="btn primary" id="btn-aud">Auditar repetição</button>
+        <label>Lote para detalhar <select class="txt" id="aud-lote"></select></label>
+        <button class="btn" id="btn-exp-aud" disabled>Auditoria (CSV)</button>
+        <button class="btn" id="btn-exp-aud-l" disabled>Limites individuais (CSV)</button>
+      </div>
+      <div class="stale-zone" id="aud-zone">
+        <div class="note warn stale-banner" id="aud-stale"></div>
+        <div class="content" id="aud-out"></div>
+      </div>
+    </div>
+    <div class="card meth" id="metodologia"></div>
+  </section>
+</main>
+<script id="engine-src">/* Motor de simulação — Leilão beneficente de amostras de cafés especiais.
+   Código puro (sem DOM), usado no Web Worker e na thread principal (auditoria / fallback).
+   Todos os números aleatórios vêm de um gerador baseado em contador (hash), de modo que
+   cada sorteio é identificado por (semente, repetição, fluxo, chaves) e é reutilizado
+   entre cenários: números aleatórios comuns (CRN). */
+(function (root) {
+  'use strict';
+  var VERSION = '1.0.0';
+
+  // ---------------------------------------------------------------- RNG por contador
+  function mix(h) {
+    h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b);
+    h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35);
+    h ^= h >>> 16; return h >>> 0;
+  }
+  function hash5(s, r, t, a, b) {
+    var h = mix((s ^ 0x9e3779b9) >>> 0);
+    h = mix((h ^ Math.imul(r + 1, 0x27d4eb2f)) >>> 0);
+    h = mix((h ^ Math.imul(t + 1, 0x165667b1)) >>> 0);
+    h = mix((h ^ Math.imul(a + 1, 0x9e3779b1)) >>> 0);
+    h = mix((h ^ Math.imul(b + 1, 0x85ebca77)) >>> 0);
+    return mix((h ^ 0x6a09e667) >>> 0);
+  }
+  function u01(s, r, t, a, b) { return (hash5(s, r, t, a, b) + 0.5) / 4294967296; }
+  function strHash(str) { // FNV-1a 32 bits
+    var h = 0x811c9dc5; str = String(str);
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return h >>> 0;
+  }
+  // Inversa da normal padrão (Acklam), erro relativo < 1.2e-9
+  var A_ = [-3.969683028665376e+01, 2.209460984245205e+02, -2.759285104469687e+02, 1.383577518672690e+02, -3.066479806614716e+01, 2.506628277459239e+00];
+  var B_ = [-5.447609879822406e+01, 1.615858368580409e+02, -1.556989798598866e+02, 6.680131188771972e+01, -1.328068155288572e+01];
+  var C_ = [-7.784894002430293e-03, -3.223964580411365e-01, -2.400758277161838e+00, -2.549732539343734e+00, 4.374664141464968e+00, 2.938163982698783e+00];
+  var D_ = [7.784695709041462e-03, 3.224671290700398e-01, 2.445134137142996e+00, 3.754408661907416e+00];
+  function invPhi(p) {
+    var q, r;
+    if (p < 0.02425) { q = Math.sqrt(-2 * Math.log(p)); return (((((C_[0] * q + C_[1]) * q + C_[2]) * q + C_[3]) * q + C_[4]) * q + C_[5]) / ((((D_[0] * q + D_[1]) * q + D_[2]) * q + D_[3]) * q + 1); }
+    if (p > 1 - 0.02425) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((C_[0] * q + C_[1]) * q + C_[2]) * q + C_[3]) * q + C_[4]) * q + C_[5]) / ((((D_[0] * q + D_[1]) * q + D_[2]) * q + D_[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((A_[0] * r + A_[1]) * r + A_[2]) * r + A_[3]) * r + A_[4]) * r + A_[5]) * q / (((((B_[0] * r + B_[1]) * r + B_[2]) * r + B_[3]) * r + B_[4]) * r + 1);
+  }
+  function nrm(s, r, t, a, b) { return invPhi(u01(s, r, t, a, b)); }
+  // PRNG sequencial simples (inventário sintético, bootstrap)
+  function mulberry32(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; var t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+  var ST = { ORC: 1, AVAL: 2, ATIVO: 3, PRIO: 4, PREFC: 5, RUIDO_A: 6, RUIDO_B: 7, ORDEM_A: 8, ORDEM_B: 9 };
+
+  // ---------------------------------------------------------------- Configuração padrão
+  function inventarioSintetico(nCafes, porCafe, semente, mMin, mMax) {
+    nCafes = Math.max(1, Math.round(nCafes)); porCafe = Math.max(1, Math.round(porCafe));
+    mMin = mMin == null ? 150 : mMin; mMax = mMax == null ? 250 : mMax;
+    var rnd = mulberry32((semente | 0) + 2026), inv = [], id = 1;
+    var passo = (90 - 86.5) / 9; // 1º = 90 (informado); 10º ≈ 86,5 (informado)
+    for (var c = 1; c <= nCafes; c++) {
+      var nota = Math.round((90 - passo * (c - 1)) * 100) / 100;
+      var informada = (c === 1 || c === 10);
+      for (var j = 0; j < porCafe; j++) {
+        inv.push({ amostra_id: 'A' + String(id).padStart(3, '0'), cafe_id: 'cafe_' + String(c).padStart(2, '0'), colocacao: c,
+          nota: nota, massa_g: Math.round((mMin + (mMax - mMin) * rnd()) * 10) / 10, ordem_manual: null,
+          origem_nota: informada ? 'informado' : 'sintético', origem_massa: 'sintético' });
+        id++;
+      }
+    }
+    return inv;
+  }
+
+  function defaultConfig() {
+    return {
+      versao: VERSION,
+      // Evento e participantes
+      N: 65, fracAtivos: 0.8, taxa: 0, taxaReduzOrc: true,
+      orcDist: 'lognormal', orcMediana: 4000, orcSigma: 0.5, orcAmpl: 0.5,
+      maxCompras: 2, d: 0.7, c: 0.8,
+      // Inventário e oferta
+      modo: 'A', k: 20, massaLote: 200, ordem: 'aleatoria', nCafes: 10, porCafe: 5,
+      inventario: inventarioSintetico(10, 5, 42),
+      // Valores e regras
+      dapRef: 1200, massaRef: 200, notaRef: 86.5, sigmaA: 0.4, sigmaPc: 0.2, sigmaPl: 0.15,
+      beta: 0.15, eta: 0.5, alpha: 0.3, k0: 5,
+      reservaModo: 'fixa', reserva: 300, reservaGrama: 1.5,
+      mecanismo: 'segundo', incremento: 50,
+      // Custos e restrições
+      custoFixo: 0, custoPart: 0, custoLote: 0, custoGrama: 0,
+      capacidade: 80, tempoLote: 3, duracaoMax: 150, gMin: 50, gMax: 250,
+      // Simulação
+      semente: 42, repPrevia: 300, repFinal: 2000, meta: 40000,
+      regraGram: 'todos',
+      objetivo: 'liquida', repOtim: 400, repValid: 2000, topValid: 5,
+      gNMin: 50, gNMax: 80, gNPasso: 10, gKMin: 5, gKMax: 50, gKPasso: 5, gGMin: 100, gGMax: 250, gGPasso: 50
+    };
+  }
+
+  // ---------------------------------------------------------------- Inventário
+  function prepInventario(cfg) {
+    var inv = cfg.inventario || [], cafes = [], idx = {}, i;
+    for (i = 0; i < inv.length; i++) {
+      var s = inv[i];
+      if (!(s.cafe_id in idx)) { idx[s.cafe_id] = cafes.length; cafes.push({ id: s.cafe_id, h: strHash(s.cafe_id), nota: s.nota, colocacao: s.colocacao, massa: 0, n: 0, ordem: Infinity }); }
+      var c = cafes[idx[s.cafe_id]]; c.massa += +s.massa_g; c.n++;
+      if (s.ordem_manual != null && s.ordem_manual !== '' && isFinite(s.ordem_manual)) c.ordem = Math.min(c.ordem, +s.ordem_manual);
+      if (+s.nota > c.nota) c.nota = +s.nota;
+    }
+    var amostras = inv.map(function (s, j) {
+      return { j: j, id: String(s.amostra_id), h: strHash(s.amostra_id), c: idx[s.cafe_id], nota: +s.nota, massa: +s.massa_g,
+        ordem: (s.ordem_manual != null && s.ordem_manual !== '' && isFinite(s.ordem_manual)) ? +s.ordem_manual : null };
+    });
+    var massaTotal = 0; for (i = 0; i < amostras.length; i++) massaTotal += amostras[i].massa;
+    return { cafes: cafes, amostras: amostras, massaTotal: massaTotal };
+  }
+  function lotesViaveisB(P, g) { var t = 0; for (var c = 0; c < P.cafes.length; c++) t += Math.floor(P.cafes[c].massa / g + 1e-9); return t; }
+  function amostrasElegiveisA(P, cfg) {
+    return P.amostras.filter(function (a) { return a.massa >= cfg.gMin - 1e-9 && a.massa <= cfg.gMax + 1e-9 && (cfg.ordem !== 'manual' || a.ordem != null); });
+  }
+
+  // ---------------------------------------------------------------- Resolução de um cenário
+  // estrito=true: não limita; marca inviável. estrito=false: limita k e informa a restrição ativa.
+  function resolver(cfg, ov, P, estrito) {
+    var s = Object.assign({}, cfg, ov || {});
+    var r = { cfg: s, N: Math.round(s.N), kReq: Math.round(s.k), g: s.modo === 'B' ? s.massaLote : null, viavel: true, motivos: [], ativas: [] };
+    if (r.N > s.capacidade) {
+      if (estrito) { r.viavel = false; r.motivos.push('participantes acima da capacidade (' + s.capacidade + ')'); }
+      else { r.ativas.push('capacidade: participantes limitados a ' + s.capacidade); r.N = s.capacidade; }
+    }
+    var capTempo = s.tempoLote > 0 ? Math.floor(s.duracaoMax / s.tempoLote + 1e-9) : Infinity;
+    var capEstoque;
+    if (s.modo === 'B') {
+      if (s.massaLote < s.gMin - 1e-9 || s.massaLote > s.gMax + 1e-9) { r.viavel = false; r.motivos.push('massa por lote fora do intervalo permitido [' + s.gMin + '; ' + s.gMax + '] g'); }
+      capEstoque = s.ordem === 'manual' ? lotesViaveisB({ cafes: P.cafes.filter(function (c) { return isFinite(c.ordem); }) }, s.massaLote) : lotesViaveisB(P, s.massaLote);
+    } else capEstoque = amostrasElegiveisA(P, s).length;
+    r.capTempo = capTempo; r.capEstoque = capEstoque;
+    var k = r.kReq;
+    if (k > capEstoque) {
+      if (estrito) { r.viavel = false; r.motivos.push('lotes acima do estoque viável (' + capEstoque + ')'); }
+      else { r.ativas.push('estoque: no máximo ' + capEstoque + ' lotes viáveis'); k = capEstoque; }
+    }
+    if (k > capTempo) {
+      if (estrito) { r.viavel = false; r.motivos.push('lotes acima do limite de duração (' + capTempo + ')'); }
+      else { r.ativas.push('duração: no máximo ' + capTempo + ' lotes em ' + s.duracaoMax + ' min'); k = Math.min(k, capTempo); }
+    }
+    r.k = Math.max(0, k);
+    if (r.N < 0) r.N = 0;
+    return r;
+  }
+
+  // ---------------------------------------------------------------- Mundo (sorteios de uma repetição)
+  function Mundo(seed, rep, P, maxN, maxIdxB) {
+    this.seed = seed; this.rep = rep; this.P = P; this.maxN = maxN;
+    var nC = P.cafes.length, nA = P.amostras.length, i, c, a;
+    this.nC = nC; this.nA = nA;
+    this.Ub = new Float64Array(maxN); this.Zb = new Float64Array(maxN); this.Wa = new Float64Array(maxN);
+    this.Ua = new Float64Array(maxN); this.Up = new Float64Array(maxN);
+    this.Tc = new Float64Array(maxN * nC); this.ElA = new Float64Array(maxN * nA);
+    // itens B: (café, índice) para índice < maxIdxB[c]
+    this.baseB = new Int32Array(nC + 1);
+    for (c = 0; c < nC; c++) this.baseB[c + 1] = this.baseB[c] + maxIdxB[c];
+    var nB = this.baseB[nC]; this.nB = nB;
+    this.ElB = new Float64Array(maxN * nB);
+    for (i = 0; i < maxN; i++) {
+      var ub = u01(seed, rep, ST.ORC, i, 0); this.Ub[i] = ub; this.Zb[i] = invPhi(ub);
+      this.Wa[i] = nrm(seed, rep, ST.AVAL, i, 0);
+      this.Ua[i] = u01(seed, rep, ST.ATIVO, i, 0);
+      this.Up[i] = u01(seed, rep, ST.PRIO, i, 0);
+      for (c = 0; c < nC; c++) this.Tc[i * nC + c] = nrm(seed, rep, ST.PREFC, i, P.cafes[c].h);
+      for (a = 0; a < nA; a++) this.ElA[i * nA + a] = nrm(seed, rep, ST.RUIDO_A, i, P.amostras[a].h);
+      for (c = 0; c < nC; c++) for (var q = 0; q < maxIdxB[c]; q++)
+        this.ElB[i * nB + this.baseB[c] + q] = nrm(seed, rep, ST.RUIDO_B, i, mix((P.cafes[c].h ^ Math.imul(q + 7, 0x9e3779b1)) >>> 0));
+    }
+    this.ordA = new Float64Array(nA);
+    for (a = 0; a < nA; a++) this.ordA[a] = u01(seed, rep, ST.ORDEM_A, P.amostras[a].h, 0);
+    this.ordB = new Float64Array(nB);
+    for (c = 0; c < nC; c++) for (q = 0; q < maxIdxB[c]; q++) this.ordB[this.baseB[c] + q] = u01(seed, rep, ST.ORDEM_B, P.cafes[c].h, q);
+    this.cacheDer = {}; this.cacheOferta = {};
+  }
+  Mundo.prototype.derivados = function (sA, sPc, sPl) {
+    var key = sA + '|' + sPc + '|' + sPl, d = this.cacheDer[key];
+    if (d) return d;
+    var n = this.maxN, i, x;
+    d = { A: new Float64Array(n), Pc: new Float64Array(this.Tc.length), PlA: new Float64Array(this.ElA.length), PlB: new Float64Array(this.ElB.length) };
+    for (i = 0; i < n; i++) d.A[i] = Math.exp(sA * this.Wa[i]);
+    for (x = 0; x < this.Tc.length; x++) d.Pc[x] = Math.exp(sPc * this.Tc[x]);
+    for (x = 0; x < this.ElA.length; x++) d.PlA[x] = Math.exp(sPl * this.ElA[x]);
+    for (x = 0; x < this.ElB.length; x++) d.PlB[x] = Math.exp(sPl * this.ElB[x]);
+    this.cacheDer[key] = d; return d;
+  };
+  // Lista ordenada de lotes potenciais (antes de cortar em k)
+  Mundo.prototype.oferta = function (s) {
+    var key = s.modo + '|' + (s.modo === 'B' ? s.massaLote : '') + '|' + s.ordem + '|' + s.gMin + '|' + s.gMax;
+    var o = this.cacheOferta[key]; if (o) return o;
+    var P = this.P, self = this, lots = [], c, q;
+    if (s.modo === 'A') {
+      var el = amostrasElegiveisA(P, s);
+      lots = el.map(function (a) { return { item: a.j, c: a.c, nota: a.nota, massa: a.massa, id: a.id, ord: self.ordA[a.j], om: a.ordem, q: 0 }; });
+    } else {
+      for (c = 0; c < P.cafes.length; c++) {
+        if (s.ordem === 'manual' && !isFinite(P.cafes[c].ordem)) continue;
+        var n = Math.floor(P.cafes[c].massa / s.massaLote + 1e-9);
+        for (q = 0; q < n; q++) lots.push({ item: this.baseB[c] + q, c: c, nota: P.cafes[c].nota, massa: s.massaLote, id: P.cafes[c].id + '#' + (q + 1), ord: this.ordB[this.baseB[c] + q], om: P.cafes[c].ordem, q: q });
+      }
+    }
+    // índice de rodada: posição da amostra dentro do seu café (ordem por nota e sorteio)
+    if (s.ordem === 'rodizio') {
+      var porCafe = {};
+      lots.slice().sort(function (x, y) { return x.c - y.c || x.ord - y.ord; }).forEach(function (l) { porCafe[l.c] = (porCafe[l.c] || 0); l.rodada = porCafe[l.c]++; });
+    }
+    var cmp;
+    if (s.ordem === 'aleatoria') cmp = function (x, y) { return x.ord - y.ord; };
+    else if (s.ordem === 'nota') cmp = function (x, y) { return y.nota - x.nota || x.c - y.c || x.q - y.q || x.ord - y.ord; };
+    else if (s.ordem === 'rodizio') cmp = function (x, y) { return x.rodada - y.rodada || y.nota - x.nota || x.c - y.c || x.ord - y.ord; };
+    else cmp = function (x, y) { return x.om - y.om || x.c - y.c || x.q - y.q || String(x.id).localeCompare(String(y.id)); };
+    lots.sort(cmp);
+    this.cacheOferta[key] = lots; return lots;
+  };
+
+  // ---------------------------------------------------------------- Uma repetição de um cenário
+  // aud: objeto opcional para registrar a trilha completa
+  function simularRep(W, R, aud) {
+    var s = R.cfg, N = R.N, k = R.k, P = W.P, nC = W.nC, i, j;
+    var der = W.derivados(s.sigmaA, s.sigmaPc, s.sigmaPl);
+    var lotsAll = W.oferta(s), lots = lotsAll.slice(0, k);
+    var M = Math.max(0, Math.round(s.maxCompras));
+    var dpow = [], cpow = [];
+    for (i = 0; i <= M + 1; i++) { dpow.push(Math.pow(s.d, i)); cpow.push(Math.pow(s.c, i)); }
+    var X = k > 0 ? Math.pow(s.k0 / k, s.alpha) : 1;
+    var saldo = new Float64Array(N), ini = new Float64Array(N), gasto = new Float64Array(N), h = new Int32Array(N), qc = new Int32Array(N * nC);
+    var ativo = new Uint8Array(N), nAtivos = 0;
+    for (i = 0; i < N; i++) {
+      var b;
+      if (s.orcDist === 'lognormal') b = s.orcMediana * Math.exp(s.orcSigma * W.Zb[i]);
+      else if (s.orcDist === 'uniforme') b = Math.max(0, s.orcMediana * (1 + s.orcAmpl * (2 * W.Ub[i] - 1)));
+      else b = s.orcMediana;
+      ini[i] = s.taxaReduzOrc ? Math.max(0, b - s.taxa) : b; saldo[i] = ini[i];
+      if (W.Ua[i] < s.fracAtivos) { ativo[i] = 1; nAtivos++; }
+      if (aud) aud.compradores.push({ comprador: i + 1, ativo: !!ativo[i], orcamento: b, saldo_inicial: ini[i], aval_ref: s.dapRef * der.A[i], prioridade_desempate: W.Up[i] });
+    }
+    var receita = 0, vendidos = 0, mOf = 0, mVend = 0, nA = W.nA, nB = W.nB, inc = Math.max(1e-9, s.incremento);
+    for (j = 0; j < k; j++) {
+      var L = lots[j], cj = L.c, gj = L.massa;
+      var res = s.reservaModo === 'fixa' ? s.reserva : s.reservaModo === 'grama' ? s.reservaGrama * gj : Math.max(s.reserva, s.reservaGrama * gj);
+      var Q = Math.exp(s.beta * (L.nota - s.notaRef)) * Math.pow(gj / s.massaRef, s.eta);
+      var base = s.dapRef * Q * X;
+      var Pl = s.modo === 'A' ? der.PlA : der.PlB, nI = s.modo === 'A' ? nA : nB;
+      var b1 = -1, b2 = -1, L1 = -1, L2 = -1, nEleg = 0;
+      mOf += gj;
+      for (i = 0; i < N; i++) {
+        if (!ativo[i]) { if (aud) aud.lances.push(linhaLance(j, i, L, null, null, saldo[i], h[i], qc[i * nC + cj], false, 'inativo')); continue; }
+        if (h[i] >= M) { if (aud) aud.lances.push(linhaLance(j, i, L, null, 0, saldo[i], h[i], qc[i * nC + cj], false, 'limite de compras atingido')); continue; }
+        var v = base * der.A[i] * der.Pc[i * nC + cj] * Pl[i * nI + L.item] * dpow[h[i]] * cpow[qc[i * nC + cj]];
+        var lim = v < saldo[i] ? v : saldo[i];
+        var eleg = lim >= res;
+        if (aud) aud.lances.push(linhaLance(j, i, L, v, lim, saldo[i], h[i], qc[i * nC + cj], eleg, eleg ? 'elegível' : (saldo[i] < res ? 'saldo abaixo da reserva' : 'avaliação abaixo da reserva')));
+        if (!eleg) continue;
+        nEleg++;
+        if (b1 < 0 || lim > L1 || (lim === L1 && W.Up[i] < W.Up[b1])) { b2 = b1; L2 = L1; b1 = i; L1 = lim; }
+        else if (b2 < 0 || lim > L2 || (lim === L2 && W.Up[i] < W.Up[b2])) { b2 = i; L2 = lim; }
+      }
+      var preco = 0, regra, incs = null;
+      if (nEleg === 0) regra = 'sem elegíveis: não vendido';
+      else if (nEleg === 1) { preco = res; regra = 'um elegível: paga a reserva'; }
+      else if (s.mecanismo === 'segundo') { preco = Math.max(res, L2); regra = L1 === L2 ? 'empate: prioridade aleatória; paga o segundo limite (= primeiro)' : 'segundo preço: paga o 2º maior limite elegível'; }
+      else {
+        var m2 = Math.floor((L2 - res) / inc + 1e-9), prox = res + (m2 + 1) * inc;
+        if (L1 >= prox - 1e-9) { preco = prox; incs = m2 + 1; regra = 'inglês: 2º desiste após ' + m2 + ' incremento(s); vencedor cobre o próximo lance'; }
+        else { preco = res + m2 * inc; incs = m2; regra = 'inglês: os dois maiores limites ficam no mesmo degrau; vence o maior limite (prioridade em empate) ao lance corrente'; }
+      }
+      var antes = b1 >= 0 ? saldo[b1] : null;
+      if (nEleg > 0) {
+        if (aud && !(preco >= res - 1e-9 && preco <= L1 + 1e-9)) aud.erros.push('Lote ' + (j + 1) + ': preço fora de [reserva, limite]');
+        saldo[b1] -= preco; gasto[b1] += preco; h[b1]++; qc[b1 * nC + cj]++; receita += preco; vendidos++; mVend += gj;
+      }
+      if (aud) aud.lotes.push({ lote: j + 1, id_lote: L.id, cafe_id: P.cafes[cj].id, nota: L.nota, massa_g: gj, reserva: res, elegiveis: nEleg,
+        vendido: nEleg > 0, vencedor: b1 >= 0 ? b1 + 1 : null, maior_limite: b1 >= 0 ? L1 : null, segundo_limite: b2 >= 0 ? L2 : null,
+        preco: preco, incrementos: incs, regra: regra, saldo_antes: antes, saldo_depois: b1 >= 0 ? saldo[b1] : null, receita_acumulada: receita });
+    }
+    var winners = 0, hhi = 0, top = 0;
+    for (i = 0; i < N; i++) if (h[i] > 0) { winners++; var sh = gasto[i] / receita; hhi += sh * sh; if (sh > top) top = sh; }
+    var taxaRec = N * s.taxa;
+    var custos = s.custoFixo + N * s.custoPart + k * s.custoLote + mOf * s.custoGrama;
+    var estoque = P.massaTotal; // massa física total do inventário (mesma nos modos A e B)
+    var m = { bruta: receita, inscricao: taxaRec, custos: custos, liquida: receita + taxaRec - custos, vendidos: vendidos, ofertados: k,
+      taxaVenda: k > 0 ? vendidos / k : NaN, precoMedio: vendidos > 0 ? receita / vendidos : NaN, vencedores: winners, ativos: nAtivos,
+      hhi: receita > 0 ? hhi : NaN, topShare: receita > 0 ? top : NaN, massaOf: mOf, massaVend: mVend, massaNaoVend: mOf - mVend,
+      massaResid: estoque - mOf, recGrama: mVend > 0 ? receita / mVend : NaN, recLoteOf: k > 0 ? receita / k : NaN };
+    if (aud) {
+      var sumG = 0, ok = true;
+      for (i = 0; i < N; i++) {
+        sumG += gasto[i];
+        if (saldo[i] < -1e-6) { ok = false; aud.erros.push('Comprador ' + (i + 1) + ' com saldo negativo'); }
+        if (h[i] > M) { ok = false; aud.erros.push('Comprador ' + (i + 1) + ' excedeu o limite de compras'); }
+        if (Math.abs(ini[i] - saldo[i] - gasto[i]) > 1e-6) { ok = false; aud.erros.push('Comprador ' + (i + 1) + ': saldo não reconcilia'); }
+        aud.compradores[i].compras = h[i]; aud.compradores[i].gasto = gasto[i]; aud.compradores[i].saldo_final = saldo[i];
+      }
+      if (Math.abs(sumG - receita) > 1e-6) aud.erros.push('Receita não reconcilia com pagamentos');
+      if (mOf > estoque + 1e-6) aud.erros.push('Massa ofertada excede o estoque');
+      aud.reconc = { receita_lotes: receita, soma_pagamentos: sumG, massa_estoque: estoque, massa_ofertada: mOf, massa_vendida: mVend,
+        massa_nao_vendida: mOf - mVend, massa_residual: estoque - mOf, lotes_ofertados: k, lotes_vendidos: vendidos };
+      aud.metricas = m;
+    }
+    return m;
+  }
+  function linhaLance(j, i, L, v, lim, saldo, h, q, eleg, status) {
+    return { lote: j + 1, comprador: i + 1, cafe_id: null, avaliacao: v, limite: lim, saldo_antes: saldo, compras_antes: h, compras_mesmo_cafe: q, elegivel: eleg, situacao: status };
+  }
+
+  var METRICAS = ['liquida', 'bruta', 'inscricao', 'custos', 'vendidos', 'ofertados', 'taxaVenda', 'precoMedio', 'vencedores', 'ativos', 'hhi', 'topShare', 'massaOf', 'massaVend', 'massaNaoVend', 'massaResid', 'recGrama', 'recLoteOf'];
+
+  // ---------------------------------------------------------------- Estatística
+  function quantil(sorted, p) {
+    var n = sorted.length; if (!n) return NaN;
+    var h = (n - 1) * p, lo = Math.floor(h), hi = Math.ceil(h);
+    return sorted[lo] + (h - lo) * (sorted[hi] - sorted[lo]);
+  }
+  function tQuant(nu) { // quantil 0,975 da t de Student (expansão de Cornish-Fisher)
+    if (!(nu > 0)) return NaN; var z = 1.959963985;
+    return z + (z * z * z + z) / (4 * nu) + (5 * Math.pow(z, 5) + 16 * z * z * z + 3 * z) / (96 * nu * nu) + (3 * Math.pow(z, 7) + 19 * Math.pow(z, 5) + 17 * z * z * z - 15 * z) / (384 * nu * nu * nu);
+  }
+  function resumir(arr) {
+    var x = [], i; for (i = 0; i < arr.length; i++) if (isFinite(arr[i])) x.push(arr[i]);
+    var n = x.length; if (!n) return { n: 0, media: NaN, mediana: NaN, p10: NaN, p90: NaN, dp: NaN, ep: NaN, icInf: NaN, icSup: NaN };
+    var s = 0; for (i = 0; i < n; i++) s += x[i]; var m = s / n, v = 0;
+    for (i = 0; i < n; i++) v += (x[i] - m) * (x[i] - m);
+    var dp = n > 1 ? Math.sqrt(v / (n - 1)) : NaN, ep = dp / Math.sqrt(n), t = tQuant(n - 1);
+    x.sort(function (a, b) { return a - b; });
+    return { n: n, media: m, mediana: quantil(x, 0.5), p10: quantil(x, 0.1), p90: quantil(x, 0.9), dp: dp, ep: ep, icInf: m - t * ep, icSup: m + t * ep, min: x[0], max: x[n - 1] };
+  }
+  function resumirCenario(res, meta) {
+    var o = {}; METRICAS.forEach(function (k) { o[k] = resumir(res[k]); });
+    var c = 0, n = res.liquida.length; for (var i = 0; i < n; i++) if (res.liquida[i] >= meta) c++;
+    var p = n ? c / n : NaN; o.probMeta = { p: p, ep: Math.sqrt(p * (1 - p) / Math.max(1, n)) };
+    var t = 0; for (i = 0; i < n; i++) if (res.vendidos[i] === res.ofertados[i]) t++; o.probTodos = n ? t / n : NaN;
+    return o;
+  }
+  function valorObjetivo(obj, arrLiq, arrBruta, meta) {
+    if (obj === 'bruta') return media(arrBruta);
+    if (obj === 'p10') return quantil(Array.prototype.slice.call(arrLiq).sort(function (a, b) { return a - b; }), 0.1);
+    if (obj === 'meta') { var c = 0; for (var i = 0; i < arrLiq.length; i++) if (arrLiq[i] >= meta) c++; return c / arrLiq.length; }
+    return media(arrLiq);
+  }
+  function media(a) { var s = 0; for (var i = 0; i < a.length; i++) s += a[i]; return a.length ? s / a.length : NaN; }
+
+  // ---------------------------------------------------------------- Executor de cenários (gerador, cancelável)
+  // cenarios: [{id, R (resolvido)}]
+  function* executar(cfg, P, cenarios, reps, seed, rotulo) {
+    var maxN = 1, gMinUsado = Infinity, i, c;
+    cenarios.forEach(function (x) { maxN = Math.max(maxN, x.R.N); if (x.R.cfg.modo === 'B') gMinUsado = Math.min(gMinUsado, x.R.cfg.massaLote); });
+    var maxIdxB = P.cafes.map(function (cf) { return isFinite(gMinUsado) ? Math.floor(cf.massa / gMinUsado + 1e-9) : 0; });
+    var out = cenarios.map(function () { var o = {}; METRICAS.forEach(function (k) { o[k] = new Float64Array(reps); }); return o; });
+    var t0 = Date.now();
+    for (var r = 0; r < reps; r++) {
+      var W = new Mundo(seed, r, P, maxN, maxIdxB);
+      for (i = 0; i < cenarios.length; i++) {
+        var m = simularRep(W, cenarios[i].R, null);
+        for (c = 0; c < METRICAS.length; c++) out[i][METRICAS[c]][r] = m[METRICAS[c]];
+      }
+      if ((r & 3) === 3 || r === reps - 1) yield { fase: rotulo, feito: r + 1, total: reps };
+    }
+    return out;
+  }
+
+  function faixa(a, b, p) { var o = []; if (!(p > 0)) return [a]; for (var x = a; x <= b + 1e-9; x += p) o.push(Math.round(x * 1000) / 1000); return o; }
+
+  // Monta os cenários da análise (atual + varreduras + mapa de calor + sensibilidade)
+  function montarAnalise(cfg, P, incluirSens) {
+    var lista = [], atual = resolver(cfg, null, P, false);
+    lista.push({ id: 'atual', grupo: 'atual', R: atual });
+    faixa(cfg.gKMin, cfg.gKMax, cfg.gKPasso).forEach(function (k) {
+      var R = resolver(cfg, { k: k }, P, true); lista.push({ id: 'k' + k, grupo: 'lotes', x: k, R: R });
+    });
+    faixa(cfg.gNMin, cfg.gNMax, cfg.gNPasso).forEach(function (n) {
+      var R = resolver(cfg, { N: n }, P, true); lista.push({ id: 'n' + n, grupo: 'participantes', x: n, R: R });
+    });
+    var gs = faixa(cfg.gGMin, cfg.gGMax, cfg.gGPasso);
+    function kParaG(g) { var R0 = resolver(cfg, { modo: 'B', massaLote: g, k: 1e9 }, P, false); return cfg.regraGram === 'todos' ? R0.k : Math.min(cfg.k, R0.k); }
+    gs.forEach(function (g) {
+      var R = resolver(cfg, { modo: 'B', massaLote: g, k: kParaG(g) }, P, true); lista.push({ id: 'g' + g, grupo: 'gramatura', x: g, R: R });
+    });
+    faixa(cfg.gNMin, cfg.gNMax, cfg.gNPasso).forEach(function (n) {
+      gs.forEach(function (g) { var R = resolver(cfg, { modo: 'B', massaLote: g, k: kParaG(g), N: n }, P, true); lista.push({ id: 'h' + n + '_' + g, grupo: 'calor', x: g, y: n, R: R }); });
+    });
+    if (incluirSens) {
+      SENS(cfg).forEach(function (sv) {
+        ['baixo', 'alto'].forEach(function (lado) {
+          var ov = {}; ov[sv.chave] = sv[lado];
+          lista.push({ id: 's_' + sv.chave + '_' + lado, grupo: 'sens', chave: sv.chave, rotulo: sv.rotulo, lado: lado, valor: sv[lado], R: resolver(cfg, ov, P, false) });
+        });
+      });
+    }
+    return lista;
+  }
+  function SENS(cfg) {
+    function mult(ch, rot, a, b) { return { chave: ch, rotulo: rot, baixo: cfg[ch] * a, alto: cfg[ch] * b }; }
+    return [
+      mult('orcMediana', 'Mediana do orçamento ×0,5 / ×1,5', 0.5, 1.5),
+      mult('dapRef', 'DAP de referência ×0,5 / ×1,5', 0.5, 1.5),
+      { chave: 'sigmaA', rotulo: 'σ avaliação 0,2 / 0,6', baixo: 0.2, alto: 0.6 },
+      { chave: 'beta', rotulo: 'β (nota) 0 / 0,30', baixo: 0, alto: 0.3 },
+      { chave: 'eta', rotulo: 'η (massa) 0 / 1', baixo: 0, alto: 1 },
+      { chave: 'alpha', rotulo: 'α (exclusividade) 0 / 0,6', baixo: 0, alto: 0.6 },
+      { chave: 'fracAtivos', rotulo: 'Fração ativa 0,5 / 1,0', baixo: 0.5, alto: 1 },
+      mult('reserva', 'Reserva fixa ×0,5 / ×1,5', 0.5, 1.5),
+      { chave: 'maxCompras', rotulo: 'Máx. compras 1 / 3', baixo: 1, alto: 3 },
+      { chave: 'd', rotulo: 'Fator d 0,5 / 0,9', baixo: 0.5, alto: 0.9 },
+      { chave: 'c', rotulo: 'Fator c (mesmo café) 0,5 / 1,0', baixo: 0.5, alto: 1 },
+      { chave: 'N', rotulo: 'Participantes ' + cfg.gNMin + ' / ' + cfg.gNMax, baixo: cfg.gNMin, alto: cfg.gNMax }
+    ];
+  }
+
+  function serializarResumo(c, res, meta, guardar) {
+    var o = { id: c.id, grupo: c.grupo, x: c.x, y: c.y, chave: c.chave, rotulo: c.rotulo, lado: c.lado, valor: c.valor,
+      viavel: c.R.viavel, motivos: c.R.motivos, ativas: c.R.ativas, N: c.R.N, k: c.R.k, kReq: c.R.kReq, g: c.R.g, modo: c.R.cfg.modo,
+      capTempo: c.R.capTempo, capEstoque: c.R.capEstoque };
+    if (res) o.stats = resumirCenario(res, meta);
+    if (res && guardar) { o.liq = Array.from(res.liquida); o.bruta = Array.from(res.bruta); }
+    return o;
+  }
+
+  function* jobAnalise(cfg, completa) {
+    var P = prepInventario(cfg), lista = montarAnalise(cfg, P, completa);
+    var reps = completa ? cfg.repFinal : cfg.repPrevia;
+    var vi = lista.filter(function (c) { return c.R.viavel && c.R.N >= 0; });
+    var out = yield* executar(cfg, P, vi, reps, cfg.semente >>> 0, completa ? 'Análise completa' : 'Prévia');
+    var mapa = {}; vi.forEach(function (c, i) { mapa[c.id] = out[i]; });
+    var base = mapa.atual;
+    var cen = lista.map(function (c) {
+      var o = serializarResumo(c, mapa[c.id], cfg.meta, c.id === 'atual');
+      if (c.grupo === 'sens' && mapa[c.id]) { // diferença pareada vs. cenário atual
+        var d = new Float64Array(reps); for (var r = 0; r < reps; r++) d[r] = mapa[c.id].liquida[r] - base.liquida[r];
+        o.dif = resumir(d);
+      }
+      return o;
+    });
+    return { tipo: completa ? 'completa' : 'previa', reps: reps, cenarios: cen, massaTotal: P.massaTotal };
+  }
+
+  function* jobOtimizacao(cfg) {
+    var P = prepInventario(cfg), Ns = faixa(cfg.gNMin, cfg.gNMax, cfg.gNPasso), Ks = faixa(cfg.gKMin, cfg.gKMax, cfg.gKPasso);
+    var Gs = cfg.modo === 'B' ? faixa(cfg.gGMin, cfg.gGMax, cfg.gGPasso) : [null];
+    var combos = [];
+    Ns.forEach(function (n) { Ks.forEach(function (k) { Gs.forEach(function (g) {
+      var ov = { N: n, k: k }; if (g != null) ov.massaLote = g;
+      combos.push({ id: 'c' + n + '_' + k + '_' + g, N: n, kk: k, gg: g, R: resolver(cfg, ov, P, true) });
+    }); }); });
+    var vi = combos.filter(function (c) { return c.R.viavel; });
+    var atual = { id: 'atual', R: resolver(cfg, null, P, false) };
+    var res1 = vi.length ? yield* executar(cfg, P, vi.concat([atual]), cfg.repOtim, cfg.semente >>> 0, 'Busca na grade') : [];
+    var ranking = vi.map(function (c, i) {
+      return { id: c.id, N: c.N, k: c.kk, g: c.gg, obj: valorObjetivo(cfg.objetivo, res1[i].liquida, res1[i].bruta, cfg.meta), stats: resumirCenario(res1[i], cfg.meta) };
+    });
+    var desempate = function (a, b) { return (b.obj - a.obj) || (b.stats.liquida.media - a.stats.liquida.media); };
+    ranking.sort(desempate);
+    var top = ranking.slice(0, Math.max(1, cfg.topValid));
+    // Validação com semente independente
+    var seedV = mix(((cfg.semente >>> 0) ^ 0x5bd1e995) >>> 0) ^ 0x2545f491;
+    seedV = seedV >>> 0;
+    var candV = top.map(function (t) { return combos.filter(function (c) { return c.id === t.id; })[0]; });
+    var res2 = top.length ? yield* executar(cfg, P, candV.concat([atual]), cfg.repValid, seedV, 'Validação independente') : [];
+    var baseV = res2.length ? res2[res2.length - 1] : null;
+    var objAtualV = baseV ? valorObjetivo(cfg.objetivo, baseV.liquida, baseV.bruta, cfg.meta) : NaN;
+    var rnd = mulberry32(seedV ^ 77), B = 300, nV = cfg.repValid;
+    var valid = candV.map(function (c, i) {
+      var r2 = res2[i], obj = valorObjetivo(cfg.objetivo, r2.liquida, r2.bruta, cfg.meta);
+      var d = new Float64Array(nV); for (var r = 0; r < nV; r++) d[r] = r2.liquida[r] - baseV.liquida[r];
+      var dRes = resumir(d), boot = [];
+      var idx = new Int32Array(nV), a1 = new Float64Array(nV), a2 = new Float64Array(nV), b1 = new Float64Array(nV), b2 = new Float64Array(nV);
+      for (var bb = 0; bb < B; bb++) {
+        for (r = 0; r < nV; r++) { var q = Math.floor(rnd() * nV); a1[r] = r2.liquida[q]; a2[r] = r2.bruta[q]; b1[r] = baseV.liquida[q]; b2[r] = baseV.bruta[q]; }
+        boot.push(valorObjetivo(cfg.objetivo, a1, a2, cfg.meta) - valorObjetivo(cfg.objetivo, b1, b2, cfg.meta));
+      }
+      boot.sort(function (a, b) { return a - b; });
+      var ganhou = 0; for (r = 0; r < nV; r++) if (d[r] > 1e-9) ganhou++;
+      return { id: c.id, N: c.N, k: c.kk, g: c.gg, obj: obj, objBusca: top[i].obj, stats: resumirCenario(r2, cfg.meta),
+        difLiq: dRes, difObj: obj - objAtualV, difObjIC: [quantil(boot, 0.025), quantil(boot, 0.975)], probSuperar: ganhou / nV };
+    });
+    valid.sort(desempate);
+    // Fronteiras e restrições
+    var best = valid[0], front = [], restr = [];
+    if (best) {
+      function chk(nome, v, arr, un) {
+        if (arr.length < 2) return;
+        if (v === arr[arr.length - 1]) front.push(nome + ' no limite SUPERIOR da busca (' + v + un + '). O ótimo pode estar além da faixa testada.');
+        else if (v === arr[0]) front.push(nome + ' no limite INFERIOR da busca (' + v + un + '). O ótimo pode estar abaixo da faixa testada.');
+      }
+      chk('Participantes', best.N, Ns, ''); chk('Lotes', best.k, Ks, ''); if (best.g != null) chk('Massa por lote', best.g, Gs, ' g');
+      var Rb = combos.filter(function (c) { return c.id === best.id; })[0].R;
+      if (best.N === cfg.capacidade) restr.push('Capacidade do evento (' + cfg.capacidade + ' participantes) é ativa.');
+      if (best.k === Rb.capTempo) restr.push('Duração máxima é ativa: ' + Rb.capTempo + ' lotes × ' + cfg.tempoLote + ' min = ' + (Rb.capTempo * cfg.tempoLote) + ' min.');
+      if (best.k === Rb.capEstoque) restr.push('Estoque é ativo: ' + Rb.capEstoque + ' lotes viáveis' + (best.g != null ? ' com ' + best.g + ' g por lote.' : ' (amostras existentes).'));
+      if (best.g != null && (best.g === cfg.gMin || best.g === cfg.gMax)) restr.push('Gramatura no limite permitido (' + cfg.gMin + '–' + cfg.gMax + ' g).');
+      var custosZero = cfg.custoPart === 0 && cfg.taxa === 0;
+      if (best.N === Ns[Ns.length - 1] && custosZero) restr.push('Sem custo por participante, mais participantes só acrescentam concorrência e orçamento: o modelo tende a escolher o máximo permitido. O organizador controla capacidade e convites, não a presença.');
+    }
+    var inviaveis = combos.filter(function (c) { return !c.R.viavel; }).map(function (c) { return { N: c.N, k: c.kk, g: c.gg, motivos: c.R.motivos }; });
+    return { tipo: 'otimizacao', objetivo: cfg.objetivo, repOtim: cfg.repOtim, repValid: cfg.repValid, seedBusca: cfg.semente >>> 0, seedValid: seedV,
+      ranking: ranking, validados: valid, atualValid: baseV ? { stats: resumirCenario(baseV, cfg.meta), obj: objAtualV, N: atual.R.N, k: atual.R.k, g: atual.R.g } : null,
+      atualBusca: res1.length ? { obj: valorObjetivo(cfg.objetivo, res1[res1.length - 1].liquida, res1[res1.length - 1].bruta, cfg.meta) } : null,
+      fronteiras: front, restricoes: restr, inviaveis: inviaveis, nCombos: combos.length, nViaveis: vi.length, Ns: Ns, Ks: Ks, Gs: Gs };
+  }
+
+  function auditar(cfg, rep) {
+    var P = prepInventario(cfg), R = resolver(cfg, null, P, false);
+    var maxIdxB = P.cafes.map(function (cf) { return cfg.modo === 'B' ? Math.floor(cf.massa / cfg.massaLote + 1e-9) : 0; });
+    var W = new Mundo(cfg.semente >>> 0, rep, P, Math.max(1, R.N), maxIdxB);
+    var aud = { lotes: [], lances: [], compradores: [], erros: [] };
+    simularRep(W, R, aud);
+    aud.lances.forEach(function (l) { var lt = aud.lotes[l.lote - 1]; l.cafe_id = lt.cafe_id; l.vencedor = lt.vencedor === l.comprador; });
+    aud.R = { N: R.N, k: R.k, g: R.g, ativas: R.ativas };
+    var naoOf = W.oferta(R.cfg).slice(R.k).map(function (l) { return l.id; });
+    aud.naoOfertados = naoOf;
+    return aud;
+  }
+
+  // Hash estável da configuração
+  function stable(o) {
+    if (o === null || typeof o !== 'object') return JSON.stringify(o);
+    if (Array.isArray(o)) return '[' + o.map(stable).join(',') + ']';
+    return '{' + Object.keys(o).sort().map(function (k) { return JSON.stringify(k) + ':' + stable(o[k]); }).join(',') + '}';
+  }
+  function hashCfg(cfg) { return ('00000000' + strHash(stable(cfg)).toString(16)).slice(-8); }
+
+  // Executa um gerador até o fim (uso em testes / Node)
+  function rodarSincrono(gen) { var r; do { r = gen.next(); } while (!r.done); return r.value; }
+
+  root.Engine = { VERSION: VERSION, defaultConfig: defaultConfig, inventarioSintetico: inventarioSintetico, prepInventario: prepInventario,
+    resolver: resolver, Mundo: Mundo, simularRep: simularRep, jobAnalise: jobAnalise, jobOtimizacao: jobOtimizacao, auditar: auditar,
+    resumir: resumir, quantil: quantil, tQuant: tQuant, hashCfg: hashCfg, rodarSincrono: rodarSincrono, lotesViaveisB: lotesViaveisB,
+    faixa: faixa, u01: u01, invPhi: invPhi, METRICAS: METRICAS, SENS: SENS, executar: executar };
+})(typeof self !== 'undefined' ? self : (typeof window !== 'undefined' ? window : globalThis));
+</script>
+<script id="worker-src" type="text/plain">/* Web Worker: executa jobs do motor sem bloquear a interface. */
+self.onmessage = function (ev) {
+  var msg = ev.data, E = self.Engine;
+  if (msg.cmd !== 'run') return;
+  try {
+    var gen = msg.kind === 'otim' ? E.jobOtimizacao(msg.cfg) : E.jobAnalise(msg.cfg, msg.kind === 'completa');
+    var last = 0, r;
+    while (true) {
+      r = gen.next();
+      if (r.done) break;
+      var now = Date.now();
+      if (now - last > 80) { last = now; self.postMessage({ type: 'progress', jobId: msg.jobId, p: r.value }); }
+    }
+    self.postMessage({ type: 'done', jobId: msg.jobId, result: r.value });
+  } catch (e) {
+    self.postMessage({ type: 'error', jobId: msg.jobId, error: String(e && e.stack || e) });
+  }
+};
+</script>
+<script>'use strict';
+/* ============================================================ utilidades */
+var E = window.Engine;
+var $ = function (s, el) { return (el || document).querySelector(s); };
+var $$ = function (s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+var NF = {};
+function fmtN(x, d) { if (x == null || !isFinite(x)) return '—'; d = d == null ? 0 : d; var k = 'n' + d; if (!NF[k]) NF[k] = new Intl.NumberFormat('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d }); return NF[k].format(x); }
+function fmtR(x, d) { return (x == null || !isFinite(x)) ? '—' : 'R$ ' + fmtN(x, d == null ? 0 : d); }
+function fmtP(x, d) { return (x == null || !isFinite(x)) ? '—' : fmtN(100 * x, d == null ? 1 : d) + '%'; }
+function fmtRk(x) { if (!isFinite(x)) return '—'; var a = Math.abs(x); if (a >= 1e6) return 'R$ ' + fmtN(x / 1e6, 1) + ' mi'; if (a >= 1e3) return 'R$ ' + fmtN(x / 1e3, a >= 1e4 ? 0 : 1) + ' mil'; return 'R$ ' + fmtN(x, 0); }
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+function debounce(fn, ms) { var t; return function () { var a = arguments, s = this; clearTimeout(t); t = setTimeout(function () { fn.apply(s, a); }, ms); }; }
+function stamp() { var d = new Date(); return d.getFullYear() + String(d.getMonth() + 1).padStart(2, '0') + String(d.getDate()).padStart(2, '0') + '_' + String(d.getHours()).padStart(2, '0') + String(d.getMinutes()).padStart(2, '0'); }
+
+/* ============================================================ CSV / downloads */
+function csvNum(v) {
+  if (v == null || v === '' || (typeof v === 'number' && !isFinite(v))) return '';
+  if (typeof v === 'number') return String(Math.round(v * 1e6) / 1e6).replace('.', ',');
+  if (typeof v === 'boolean') return v ? 'sim' : 'não';
+  var s = String(v); return /[;"\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+function toCSV(rows, cols, cabecalho) {
+  var out = [];
+  if (cabecalho) cabecalho.forEach(function (l) { out.push('# ' + l); });
+  out.push(cols.map(function (c) { return csvNum(c.label || c.key); }).join(';'));
+  rows.forEach(function (r) { out.push(cols.map(function (c) { return csvNum(typeof c.get === 'function' ? c.get(r) : r[c.key]); }).join(';')); });
+  return '﻿' + out.join('\r\n') + '\r\n';
+}
+function baixar(nome, conteudo, tipo) {
+  var blob = conteudo instanceof Blob ? conteudo : new Blob([conteudo], { type: tipo || 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = nome; document.body.appendChild(a); a.click();
+  setTimeout(function () { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  if (window.__downloads) window.__downloads.push({ nome: nome, tamanho: blob.size, conteudo: typeof conteudo === 'string' ? conteudo : null });
+}
+
+/* ============================================================ esquema de parâmetros */
+// origem: informado | estimado | hipotese
+var O = { inf: 'informado', est: 'estimado', hip: 'hipotese' };
+var SCHEMA = [
+  // ---- Evento e participantes
+  { k: 'N', sec: 'evento', l: 'Participantes no evento', u: 'pessoas', min: 0, max: 300, st: 1, o: O.est, d: 'Pessoas presentes (público estimado entre 50 e 80). Todas pagam a inscrição; nem todas dão lances.' },
+  { k: 'fracAtivos', sec: 'evento', l: 'Fração que efetivamente dá lances', u: 'fração (0–1)', min: 0, max: 1, st: 0.01, o: O.hip, d: 'Probabilidade de cada participante entrar na disputa (compradores ativos).' },
+  { k: 'taxa', sec: 'evento', l: 'Taxa de inscrição', u: 'R$ por pessoa', min: 0, max: 5000, st: 10, o: O.hip, d: 'Receita separada da receita dos lotes. Não modela desistência causada pela taxa.' },
+  { k: 'taxaReduzOrc', sec: 'evento', t: 'bool', l: 'A inscrição reduz o orçamento disponível', u: '', o: O.hip, d: 'Se marcado, saldo inicial = max(orçamento − taxa, 0).' },
+  { k: 'orcMediana', sec: 'evento', l: 'Orçamento individual — mediana', u: 'R$ por pessoa', min: 0, max: 100000, st: 100, o: O.hip, d: 'Valor máximo que a pessoa pode gastar no evento todo. Metade dos participantes tem orçamento acima da mediana.' },
+  { k: 'orcSigma', sec: 'evento', l: 'Orçamento — dispersão σ (lognormal)', u: 'desvio de log', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Desvio padrão do logaritmo do orçamento. Média = mediana × exp(σ²/2).', show: function (c) { return c.orcDist === 'lognormal'; } },
+  { k: 'maxCompras', sec: 'evento', l: 'Máximo de compras por participante', u: 'lotes', min: 1, max: 50, st: 1, o: O.hip, d: 'Regra hipotética: após atingir o limite a pessoa deixa de dar lances.' },
+  { k: 'd', sec: 'evento', l: 'Redução do interesse após cada compra (d)', u: 'fator (0–1]', min: 0.05, max: 1, st: 0.01, o: O.hip, d: 'Avaliação multiplicada por d^h, h = compras anteriores. 1 = sem redução.' },
+  { k: 'c', sec: 'evento', l: 'Redução adicional — mesmo café (c)', u: 'fator (0–1]', min: 0.05, max: 1, st: 0.01, o: O.hip, d: 'Multiplica por c^q, q = compras anteriores do mesmo café (substitutos próximos).' },
+  { k: 'orcDist', sec: 'evento-adv', t: 'sel', l: 'Distribuição do orçamento', u: '', o: O.hip, d: 'Forma da distribuição entre participantes.', opts: [['lognormal', 'Lognormal (assimétrica, positiva)'], ['uniforme', 'Uniforme ao redor da mediana'], ['constante', 'Igual para todos']] },
+  { k: 'orcAmpl', sec: 'evento-adv', l: 'Orçamento — amplitude (uniforme)', u: '± fração da mediana', min: 0, max: 1, st: 0.05, o: O.hip, d: 'Orçamento ~ Uniforme[mediana×(1−a); mediana×(1+a)].', show: function (c) { return c.orcDist === 'uniforme'; } },
+  // ---- Valores e regras
+  { k: 'dapRef', sec: 'valores', l: 'Disposição a pagar de referência (mediana)', u: 'R$ por lote', min: 0, max: 50000, st: 50, o: O.hip, d: 'Avaliação mediana de uma amostra com massa e nota de referência, quando a oferta é k₀ lotes. Não é cotação.' },
+  { k: 'beta', sec: 'valores', l: 'Efeito da pontuação (β)', u: 'por ponto', min: 0, max: 1, st: 0.01, o: O.hip, d: 'Avaliação × exp[β(nota − nota ref.)]. β = 0,15: +1 ponto ≈ +16%. Não é propriedade da escala COE.' },
+  { k: 'eta', sec: 'valores', l: 'Efeito da gramatura (η)', u: 'elasticidade', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Avaliação × (massa/massa ref.)^η. η = 1: proporcional à massa; 0: massa irrelevante.' },
+  { k: 'alpha', sec: 'valores', l: 'Efeito de exclusividade/escassez (α)', u: 'elasticidade', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Avaliação × (k₀/k)^α: ofertar mais lotes reduz o valor de cada um. Efeito hipotético, não estimado.' },
+  { k: 'reservaModo', sec: 'valores', t: 'sel', l: 'Regra do preço de reserva', u: '', o: O.hip, d: 'Valor mínimo aceito por lote.', opts: [['fixa', 'Valor fixo por lote'], ['grama', 'Valor por grama × massa do lote'], ['maior', 'Maior entre fixo e por grama']] },
+  { k: 'reserva', sec: 'valores', l: 'Reserva fixa por lote', u: 'R$', min: 0, max: 20000, st: 10, o: O.hip, d: 'Lance mínimo aceito. Sem lance elegível, o lote não é vendido.', show: function (c) { return c.reservaModo !== 'grama'; } },
+  { k: 'reservaGrama', sec: 'valores', l: 'Reserva por grama', u: 'R$/g', min: 0, max: 200, st: 0.1, o: O.hip, d: 'Reserva = valor × massa do lote.', show: function (c) { return c.reservaModo !== 'fixa'; } },
+  { k: 'mecanismo', sec: 'valores', t: 'sel', l: 'Mecanismo do leilão', u: '', o: O.hip, d: 'Segundo preço com reserva (envelope/proxy) ou leilão inglês ascendente com incremento discreto.', opts: [['segundo', 'Segundo preço com reserva'], ['ingles', 'Inglês ascendente com incremento']] },
+  { k: 'incremento', sec: 'valores', l: 'Incremento de lance', u: 'R$', min: 1, max: 5000, st: 5, o: O.hip, d: 'Passo mínimo entre lances no leilão inglês.', show: function (c) { return c.mecanismo === 'ingles'; } },
+  { k: 'sigmaA', sec: 'valores-adv', l: 'Dispersão das avaliações individuais (σ_A)', u: 'desvio de log', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Heterogeneidade do interesse geral Aᵢ entre participantes (lognormal, mediana 1).' },
+  { k: 'sigmaPc', sec: 'valores-adv', l: 'Preferência comprador–café compartilhada (σ_c)', u: 'desvio de log', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Componente comum a todos os lotes do mesmo café para cada comprador.' },
+  { k: 'sigmaPl', sec: 'valores-adv', l: 'Preferência específica do lote (σ_l)', u: 'desvio de log', min: 0, max: 2, st: 0.05, o: O.hip, d: 'Ruído idiossincrático por comprador e lote.' },
+  { k: 'massaRef', sec: 'valores-adv', l: 'Massa de referência (g₀)', u: 'g', min: 1, max: 5000, st: 1, o: O.hip, d: 'Massa à qual se refere a disposição a pagar de referência.' },
+  { k: 'notaRef', sec: 'valores-adv', l: 'Nota de referência (s₀)', u: 'pontos', min: 0, max: 100, st: 0.1, o: O.inf, d: 'Nota do 10º colocado (≈86,5) usada como base do efeito da pontuação.' },
+  { k: 'k0', sec: 'valores-adv', l: 'Quantidade de referência (k₀)', u: 'lotes', min: 1, max: 500, st: 1, o: O.hip, d: 'Oferta na qual o fator de exclusividade vale 1.' },
+  // ---- Custos e restrições
+  { k: 'custoFixo', sec: 'custos', l: 'Custo fixo do evento', u: 'R$', min: 0, max: 1000000, st: 100, o: O.hip, d: 'Local, divulgação etc. A informar (padrão 0).' },
+  { k: 'custoPart', sec: 'custos', l: 'Custo por participante', u: 'R$/pessoa', min: 0, max: 5000, st: 5, o: O.hip, d: 'Alimentação, material etc. A informar (padrão 0).' },
+  { k: 'custoLote', sec: 'custos', l: 'Preparação e embalagem por lote', u: 'R$/lote', min: 0, max: 5000, st: 1, o: O.hip, d: 'Aplicado a cada lote ofertado. A informar (padrão 0).' },
+  { k: 'custoGrama', sec: 'custos', l: 'Custo por grama ofertado', u: 'R$/g', min: 0, max: 100, st: 0.01, o: O.hip, d: 'Ex.: reembalagem/fracionamento. A informar (padrão 0).' },
+  { k: 'capacidade', sec: 'custos', l: 'Capacidade máxima do evento', u: 'pessoas', min: 0, max: 1000, st: 1, o: O.est, d: 'Teto de participantes (limite superior da faixa estimada de público).' },
+  { k: 'tempoLote', sec: 'custos', l: 'Tempo médio por lote', u: 'min', min: 0, max: 60, st: 0.5, o: O.hip, d: 'Duração média do pregão de cada lote.' },
+  { k: 'duracaoMax', sec: 'custos', l: 'Duração máxima do leilão', u: 'min', min: 1, max: 1440, st: 5, o: O.hip, d: 'Limita lotes ≤ duração / tempo por lote.' },
+  { k: 'gMin', sec: 'custos', l: 'Gramatura mínima por lote', u: 'g', min: 1, max: 5000, st: 5, o: O.hip, d: 'Lotes mais leves não são permitidos (modo A: amostras fora da faixa são excluídas).' },
+  { k: 'gMax', sec: 'custos', l: 'Gramatura máxima por lote', u: 'g', min: 1, max: 5000, st: 5, o: O.hip, d: 'Amostras informadas têm 150–250 g; acima disso o lote reúne amostras do mesmo café (modo B).' },
+  // ---- Simulação
+  { k: 'semente', sec: 'sim-adv', l: 'Semente aleatória', u: 'inteiro', min: 0, max: 2147483647, st: 1, o: O.hip, nos: true, d: 'Mesma semente + mesma configuração = mesmos resultados.' },
+  { k: 'repPrevia', sec: 'sim-adv', l: 'Repetições da prévia automática', u: 'eventos simulados', min: 20, max: 5000, st: 10, o: O.hip, d: 'Rápida, menos precisa. Executada após cada alteração.' },
+  { k: 'repFinal', sec: 'sim-adv', l: 'Repetições da análise completa', u: 'eventos simulados', min: 100, max: 50000, st: 100, o: O.hip, d: 'Erro Monte Carlo cai com 1/√repetições.' },
+  { k: 'meta', sec: 'sim-adv', l: 'Meta de arrecadação líquida', u: 'R$', min: 0, max: 10000000, st: 500, o: O.hip, d: 'Usada na probabilidade de atingir a meta.' },
+  { k: 'regraGram', sec: 'sim-adv', t: 'sel', l: 'Lotes nas varreduras de gramatura', u: '', o: O.hip, d: 'Como definir a quantidade de lotes ao variar a massa por lote (experimento B).', opts: [['todos', 'Fracionar todo o estoque (todos os lotes viáveis, até a duração)'], ['config', 'Manter a quantidade configurada (limitada aos viáveis)']] },
+  // ---- Oferta (aba inventário)
+  { k: 'modo', sec: 'oferta', t: 'sel', l: 'Modo de oferta', u: '', o: O.hip, d: 'A: vender amostras existentes (massa de cada amostra). B: fracionar/reembalar o estoque fixo de cada café em lotes de massa igual.', opts: [['A', 'A — Selecionar amostras existentes'], ['B', 'B — Fracionar um estoque fixo']] },
+  { k: 'k', sec: 'oferta', l: 'Número de lotes ofertados', u: 'lotes', min: 0, max: 500, st: 1, o: O.hip, d: 'Decisão do organizador. Limitada pelo estoque e pela duração; nunca cria café adicional.' },
+  { k: 'massaLote', sec: 'oferta', l: 'Massa por lote (modo B)', u: 'g', min: 10, max: 2000, st: 5, o: O.hip, d: 'Cada lote contém um único café. Lotes viáveis por café = ⌊massa disponível ÷ massa por lote⌋.', show: function (c) { return c.modo === 'B'; } },
+  { k: 'ordem', sec: 'oferta', t: 'sel', l: 'Seleção e ordem de venda', u: '', o: O.hip, d: 'Quais lotes entram e em que ordem são leiloados.', opts: [['aleatoria', 'Aleatória (sorteada a cada repetição)'], ['nota', 'Por nota (maiores primeiro)'], ['rodizio', 'Rodízio por nota (1 lote de cada café por rodada)'], ['manual', 'Manual (coluna ordem_manual)']] },
+  { k: 'nCafes', sec: 'gerador', l: 'Cafés distintos (gerador sintético)', u: 'cafés', min: 1, max: 100, st: 1, o: O.hip, nos: true, d: 'Usado apenas ao clicar em “Gerar inventário sintético”.' },
+  { k: 'porCafe', sec: 'gerador', l: 'Amostras por café (gerador sintético)', u: 'amostras', min: 1, max: 50, st: 1, o: O.hip, nos: true, d: 'Composição não informada. Até 50 amostras no total, sujeito à confirmação.' },
+  // ---- Otimização
+  { k: 'objetivo', sec: 'otim', t: 'sel', l: 'Objetivo', u: '', o: O.hip, d: 'Critério para ordenar as combinações.', opts: [['liquida', 'Maximizar arrecadação líquida esperada'], ['bruta', 'Maximizar receita bruta dos lotes'], ['p10', 'Maximizar o P10 da arrecadação líquida'], ['meta', 'Maximizar a probabilidade de atingir a meta']] },
+  { k: 'repOtim', sec: 'otim', l: 'Repetições por combinação (busca)', u: 'eventos', min: 50, max: 10000, st: 50, o: O.hip, d: 'Números aleatórios comuns em todas as combinações.' },
+  { k: 'repValid', sec: 'otim', l: 'Repetições da validação', u: 'eventos', min: 100, max: 50000, st: 100, o: O.hip, d: 'Nova semente independente para os melhores candidatos.' },
+  { k: 'topValid', sec: 'otim', l: 'Candidatos validados', u: 'combinações', min: 1, max: 20, st: 1, o: O.hip, d: 'Os melhores da busca que são reavaliados.' },
+  { k: 'gNMin', sec: 'grade', l: 'Participantes — mínimo', u: 'pessoas', min: 0, max: 1000, st: 1, o: O.est, d: 'Também usado no gráfico de participantes e no mapa de calor.' },
+  { k: 'gNMax', sec: 'grade', l: 'Participantes — máximo', u: 'pessoas', min: 0, max: 1000, st: 1, o: O.est, d: '' },
+  { k: 'gNPasso', sec: 'grade', l: 'Participantes — passo', u: 'pessoas', min: 1, max: 500, st: 1, o: O.hip, d: '' },
+  { k: 'gKMin', sec: 'grade', l: 'Lotes — mínimo', u: 'lotes', min: 0, max: 500, st: 1, o: O.hip, d: 'Também usado no gráfico de lotes.' },
+  { k: 'gKMax', sec: 'grade', l: 'Lotes — máximo', u: 'lotes', min: 0, max: 500, st: 1, o: O.hip, d: '' },
+  { k: 'gKPasso', sec: 'grade', l: 'Lotes — passo', u: 'lotes', min: 1, max: 500, st: 1, o: O.hip, d: '' },
+  { k: 'gGMin', sec: 'grade', l: 'Massa por lote — mínimo', u: 'g', min: 1, max: 5000, st: 5, o: O.hip, d: 'Busca de gramatura só no modo B; também usada nos gráficos de gramatura.' },
+  { k: 'gGMax', sec: 'grade', l: 'Massa por lote — máximo', u: 'g', min: 1, max: 5000, st: 5, o: O.hip, d: '' },
+  { k: 'gGPasso', sec: 'grade', l: 'Massa por lote — passo', u: 'g', min: 1, max: 5000, st: 5, o: O.hip, d: '' }
+];
+var SCH = {}; SCHEMA.forEach(function (s) { SCH[s.k] = s; });
+var ORIG_TXT = { informado: 'informado', estimado: 'estimado', hipotese: 'hipótese' };
+
+/* ============================================================ estado */
+var DEF = E.defaultConfig();
+var state = { cfg: clone(DEF), hash: '', res: null, opt: null, aud: null, jobs: {}, jobSeq: 0, workerOK: true, invErros: [] };
+
+function cfgParaSimular() { // remove campos só do gerador
+  var c = clone(state.cfg); return c;
+}
+function atualizarHash() { state.hash = E.hashCfg(state.cfg); $('#st-hash').textContent = state.hash; }
+
+/* ============================================================ validação */
+function validarCfg(c) {
+  var erros = [];
+  SCHEMA.forEach(function (s) {
+    var v = c[s.k];
+    if (s.t === 'bool') { if (typeof v !== 'boolean') erros.push(s.l + ': deve ser verdadeiro/falso'); return; }
+    if (s.t === 'sel') { if (!s.opts.some(function (o) { return o[0] === v; })) erros.push(s.l + ': opção inválida'); return; }
+    if (typeof v !== 'number' || !isFinite(v)) { erros.push(s.l + ': valor numérico ausente'); return; }
+    if (v < s.min || v > s.max) erros.push(s.l + ': fora dos limites [' + fmtN(s.min, 2) + '; ' + fmtN(s.max, 2) + ']');
+  });
+  if (c.gMin > c.gMax) erros.push('Gramatura mínima maior que a máxima.');
+  if (c.gNMin > c.gNMax) erros.push('Grade: participantes mínimo > máximo.');
+  if (c.gKMin > c.gKMax) erros.push('Grade: lotes mínimo > máximo.');
+  if (c.gGMin > c.gGMax) erros.push('Grade: massa mínima > máxima.');
+  var nComb = (Math.floor((c.gNMax - c.gNMin) / c.gNPasso) + 1) * (Math.floor((c.gKMax - c.gKMin) / c.gKPasso) + 1) * (c.modo === 'B' ? Math.floor((c.gGMax - c.gGMin) / c.gGPasso) + 1 : 1);
+  if (nComb > 3000) erros.push('Grade de otimização com ' + nComb + ' combinações (máximo 3000). Aumente os passos.');
+  var nG = Math.floor((c.gGMax - c.gGMin) / c.gGPasso) + 1, nN = Math.floor((c.gNMax - c.gNMin) / c.gNPasso) + 1, nK = Math.floor((c.gKMax - c.gKMin) / c.gKPasso) + 1;
+  if (nG * nN > 400 || nK > 200 || nN > 200 || nG > 200) erros.push('Faixas muito finas para os gráficos de varredura (máx. 200 pontos por eixo e 400 células no mapa). Aumente os passos.');
+  return erros;
+}
+function validarInventario(inv) {
+  var erros = [], ids = {};
+  if (!Array.isArray(inv) || !inv.length) return ['Inventário vazio: adicione ao menos uma amostra.'];
+  inv.forEach(function (s, i) {
+    var lin = 'Linha ' + (i + 1) + ': ';
+    if (s.amostra_id == null || String(s.amostra_id).trim() === '') erros.push(lin + 'amostra_id vazio');
+    else if (ids[s.amostra_id]) erros.push(lin + 'amostra_id “' + s.amostra_id + '” repetido'); else ids[s.amostra_id] = 1;
+    if (s.cafe_id == null || String(s.cafe_id).trim() === '') erros.push(lin + 'cafe_id vazio');
+    if (!isFinite(s.nota) || s.nota < 0 || s.nota > 100) erros.push(lin + 'nota deve estar entre 0 e 100');
+    if (!isFinite(s.massa_g) || s.massa_g <= 0 || s.massa_g > 100000) erros.push(lin + 'massa_g deve ser positiva (g)');
+    if (!isFinite(s.colocacao) || s.colocacao < 1 || Math.round(s.colocacao) !== +s.colocacao) erros.push(lin + 'colocacao deve ser inteiro ≥ 1');
+    if (s.ordem_manual != null && s.ordem_manual !== '' && !isFinite(s.ordem_manual)) erros.push(lin + 'ordem_manual deve ser número ou vazio');
+  });
+  // consistência café → nota/colocação
+  var porCafe = {};
+  inv.forEach(function (s, i) { var p = porCafe[s.cafe_id]; if (!p) porCafe[s.cafe_id] = { nota: +s.nota, col: +s.colocacao, i: i }; else if (p.nota !== +s.nota || p.col !== +s.colocacao) erros.push('Linha ' + (i + 1) + ': café “' + s.cafe_id + '” com nota/colocação diferente da linha ' + (p.i + 1) + ' (cada café deve ter uma única nota)'); });
+  return erros;
+}
+
+/* ============================================================ controles */
+function renderControles() {
+  SCHEMA.forEach(function (s) {
+    var host = $('#ctl-' + s.sec); if (!host) return;
+    var div = document.createElement('div'); div.className = 'ctl'; div.dataset.k = s.k;
+    var id = 'c_' + s.k, html = '<div class="lab"><label for="' + id + '">' + esc(s.l) + '</label><span class="orig ' + s.o + '" title="Origem do valor">' + ORIG_TXT[s.o] + '</span></div>';
+    html += '<div class="desc">' + esc(s.d) + '</div>';
+    if (s.t === 'bool') html += '<div class="row"><input type="checkbox" id="' + id + '"> <label for="' + id + '" class="unit">sim</label></div>';
+    else if (s.t === 'sel') html += '<div class="row"><select id="' + id + '">' + s.opts.map(function (o) { return '<option value="' + o[0] + '">' + esc(o[1]) + '</option>'; }).join('') + '</select></div>';
+    else {
+      html += '<div class="row">' + (s.nos ? '' : '<input type="range" id="r_' + s.k + '" min="' + s.min + '" max="' + sliderMax(s) + '" step="' + s.st + '" aria-label="' + esc(s.l) + ' (controle deslizante)">') +
+        '<input type="number" id="' + id + '" min="' + s.min + '" max="' + s.max + '" step="' + s.st + '"><span class="unit">' + esc(s.u) + '</span></div>' +
+        '<div class="lim">Limites válidos: ' + fmtN(s.min, dec(s.st)) + ' a ' + fmtN(s.max, dec(s.st)) + (s.u ? ' ' + esc(s.u) : '') + (sliderMax(s) < s.max ? ' (controle deslizante até ' + fmtN(sliderMax(s), dec(s.st)) + '; digite valores maiores)' : '') + '</div>';
+    }
+    html += '<div class="msg"></div>';
+    div.innerHTML = html; host.appendChild(div);
+    var inp = $('#' + id, div), rng = $('#r_' + s.k, div);
+    if (s.t === 'bool') inp.addEventListener('change', function () { setParam(s.k, inp.checked); });
+    else if (s.t === 'sel') inp.addEventListener('change', function () { setParam(s.k, inp.value); });
+    else {
+      if (rng) rng.addEventListener('input', function () { inp.value = rng.value; setParam(s.k, +rng.value); });
+      inp.addEventListener('input', function () {
+        var v = parseFloat(String(inp.value).replace(',', '.'));
+        var msg = $('.msg', div);
+        if (!isFinite(v) || v < s.min || v > s.max) { div.classList.add('bad'); msg.textContent = 'Valor inválido: use entre ' + fmtN(s.min, dec(s.st)) + ' e ' + fmtN(s.max, dec(s.st)) + '.'; return; }
+        div.classList.remove('bad'); msg.textContent = '';
+        if (rng) rng.value = Math.min(v, sliderMax(s)); setParam(s.k, v);
+      });
+      inp.addEventListener('blur', function () { if (div.classList.contains('bad')) { div.classList.remove('bad'); $('.msg', div).textContent = ''; syncControl(s.k); } });
+    }
+  });
+}
+function dec(st) { var s = String(st); return s.indexOf('.') < 0 ? 0 : s.length - s.indexOf('.') - 1; }
+function sliderMax(s) {
+  var lim = { taxa: 1000, orcMediana: 20000, dapRef: 10000, reserva: 5000, reservaGrama: 20, incremento: 1000, custoFixo: 50000, custoPart: 500, custoLote: 200, custoGrama: 5, capacidade: 300, duracaoMax: 600, repFinal: 20000, repPrevia: 2000, meta: 200000, repOtim: 3000, repValid: 20000, gMin: 1000, gMax: 1000, massaRef: 1000, massaLote: 1000, k: 200, gKMax: 200, gKMin: 200, gGMin: 1000, gGMax: 1000, gGPasso: 500, gNMin: 300, gNMax: 300, gNPasso: 100, gKPasso: 100, k0: 100, maxCompras: 20, N: 300 };
+  return Math.min(s.max, lim[s.k] != null ? lim[s.k] : s.max);
+}
+function syncControl(k) {
+  var s = SCH[k], v = state.cfg[k], inp = $('#c_' + k); if (!inp) return;
+  if (s.t === 'bool') inp.checked = !!v; else if (s.t === 'sel') inp.value = v;
+  else { inp.value = v; var r = $('#r_' + k); if (r) r.value = Math.min(v, sliderMax(s)); }
+  var div = inp.closest('.ctl'); div.classList.remove('bad'); $('.msg', div).textContent = '';
+}
+function syncTodos() {
+  SCHEMA.forEach(function (s) { syncControl(s.k); });
+  SCHEMA.forEach(function (s) { if (s.show) { var div = $('.ctl[data-k="' + s.k + '"]'); if (div) div.classList.toggle('hidden', !s.show(state.cfg)); } });
+}
+function setParam(k, v) {
+  state.cfg[k] = v;
+  SCHEMA.forEach(function (s) { if (s.show) { var div = $('.ctl[data-k="' + s.k + '"]'); if (div) div.classList.toggle('hidden', !s.show(state.cfg)); } });
+  if (SCH[k] && SCH[k].sec === 'gerador') return; // não altera a simulação até gerar
+  aoMudar();
+}
+
+/* ============================================================ execução (Worker com fallback) */
+var workers = {};
+function novoWorker() {
+  var src = document.getElementById('engine-src').textContent + '\n;\n' + document.getElementById('worker-src').textContent;
+  var url = URL.createObjectURL(new Blob([src], { type: 'text/javascript' }));
+  var w = new Worker(url); return w;
+}
+function iniciarJob(canal, kind, cfg, cb) {
+  cancelarJob(canal);
+  var jobId = ++state.jobSeq, job = { id: jobId, kind: kind, hash: E.hashCfg(cfg), cfg: cfg, cb: cb, t0: Date.now() };
+  state.jobs[canal] = job;
+  if (state.workerOK) {
+    try {
+      var w = novoWorker(); workers[canal] = w;
+      w.onmessage = function (ev) {
+        var m = ev.data; if (!state.jobs[canal] || state.jobs[canal].id !== m.jobId) return; // resultado antigo: descartado
+        if (m.type === 'progress') cb.progress(m.p);
+        else if (m.type === 'done') { delete state.jobs[canal]; w.terminate(); delete workers[canal]; cb.done(m.result, job); }
+        else if (m.type === 'error') { delete state.jobs[canal]; w.terminate(); delete workers[canal]; cb.error(m.error); }
+      };
+      w.onerror = function (e) { if (state.jobs[canal] && state.jobs[canal].id === jobId) { e.preventDefault && e.preventDefault(); w.terminate(); delete workers[canal]; state.workerOK = false; mostrarAvisoWorker(); iniciarJob(canal, kind, cfg, cb); } };
+      w.postMessage({ cmd: 'run', jobId: jobId, kind: kind, cfg: cfg });
+      return;
+    } catch (e) { state.workerOK = false; mostrarAvisoWorker(); }
+  }
+  // Fallback: execução em fatias na thread principal
+  var gen = kind === 'otim' ? E.jobOtimizacao(cfg) : E.jobAnalise(cfg, kind === 'completa');
+  function passo() {
+    if (!state.jobs[canal] || state.jobs[canal].id !== jobId) return;
+    var t = Date.now(), r;
+    try {
+      do { r = gen.next(); } while (!r.done && Date.now() - t < 30);
+    } catch (e) { delete state.jobs[canal]; cb.error(String(e && e.stack || e)); return; }
+    if (r.done) { delete state.jobs[canal]; cb.done(r.value, job); }
+    else { cb.progress(r.value); setTimeout(passo, 0); }
+  }
+  setTimeout(passo, 0);
+}
+function cancelarJob(canal) {
+  if (workers[canal]) { workers[canal].terminate(); delete workers[canal]; }
+  delete state.jobs[canal];
+}
+function mostrarAvisoWorker() {
+  $('#global-msg').innerHTML = '<div class="note warn">Este navegador não permitiu Web Worker para arquivo local; a simulação roda em fatias na página principal (pode ficar um pouco mais lenta, mas continua funcionando).</div>';
+}
+
+/* ============================================================ gráficos SVG (sem bibliotecas) */
+function cssv(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function paleta() {
+  return { s1: cssv('--series-1'), s2: cssv('--series-2'), s3: cssv('--series-3'), band: cssv('--band'), ci: cssv('--ci'), grid: cssv('--grid'), axis: cssv('--axis'),
+    text: cssv('--text'), text2: cssv('--text-2'), muted: cssv('--muted'), surf: cssv('--surface'), surf2: cssv('--surface-2'), seq0: cssv('--seq-0'), seq1: cssv('--seq-1'), crit: cssv('--crit'), good: cssv('--good') };
+}
+function niceTicks(lo, hi, n) {
+  if (!isFinite(lo) || !isFinite(hi)) return [0, 1];
+  if (hi === lo) { hi = lo + 1; lo = lo - 1; }
+  var span = hi - lo, step = Math.pow(10, Math.floor(Math.log10(span / n))), err = n / span * step;
+  if (err <= 0.15) step *= 10; else if (err <= 0.35) step *= 5; else if (err <= 0.75) step *= 2;
+  var t = [], s = Math.ceil(lo / step) * step; for (var v = s; v <= hi + step * 1e-9; v += step) t.push(Math.round(v / step) * step);
+  return t;
+}
+function S(tag, attrs, inner) {
+  var a = ''; for (var k in attrs) if (attrs[k] != null) a += ' ' + k + '="' + esc(attrs[k]) + '"';
+  return '<' + tag + a + (inner == null ? '/>' : '>' + inner + '</' + tag + '>');
+}
+var FONT = 'system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif';
+function svgWrap(w, h, body, titulo, C) {
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + w + ' ' + h + '" width="' + w + '" height="' + h + '" font-family="' + FONT + '" font-size="11" role="img" aria-label="' + esc(titulo) + '">' +
+    '<title>' + esc(titulo) + '</title>' + S('rect', { x: 0, y: 0, width: w, height: h, fill: C.surf }) + body + '</svg>';
+}
+function eixos(C, X, Y, xt, yt, xf, yf, m, w, h, xLabel, yLabel) {
+  var b = '';
+  yt.forEach(function (v) { var y = Y(v); b += S('line', { x1: m.l, x2: w - m.r, y1: y, y2: y, stroke: C.grid, 'stroke-width': 1 }) + S('text', { x: m.l - 6, y: y + 3.5, 'text-anchor': 'end', fill: C.muted }, esc(yf(v))); });
+  xt.forEach(function (v) { var x = X(v); b += S('line', { x1: x, x2: x, y1: h - m.b, y2: h - m.b + 4, stroke: C.axis }) + S('text', { x: x, y: h - m.b + 16, 'text-anchor': 'middle', fill: C.muted }, esc(xf(v))); });
+  b += S('line', { x1: m.l, x2: w - m.r, y1: h - m.b, y2: h - m.b, stroke: C.axis, 'stroke-width': 1 });
+  b += S('text', { x: (m.l + w - m.r) / 2, y: h - 6, 'text-anchor': 'middle', fill: C.text2 }, esc(xLabel));
+  b += S('text', { x: 12, y: (m.t + h - m.b) / 2, 'text-anchor': 'middle', fill: C.text2, transform: 'rotate(-90 12 ' + ((m.t + h - m.b) / 2) + ')' }, esc(yLabel));
+  return b;
+}
+function larguraDe(el) { return Math.max(300, Math.min(900, Math.floor(el.clientWidth || 560))); }
+
+// Cartão de gráfico com botões de exportação
+var CHARTS = {};
+function cartaoGrafico(host, id, titulo, nota, legendaHtml) {
+  var c = document.createElement('div'); c.className = 'card chart-card'; c.id = 'card-' + id;
+  c.innerHTML = '<div class="ch-head"><h3>' + esc(titulo) + '</h3><div class="toolbar"><button class="btn small" data-x="svg">SVG</button><button class="btn small" data-x="png">PNG</button><button class="btn small" data-x="csv">Dados (CSV)</button><button class="btn small" data-x="tab">Tabela</button></div></div>' +
+    '<p class="ch-note">' + nota + '</p><div class="legend">' + (legendaHtml || '') + '</div><div class="chart" id="ch-' + id + '"></div><div class="tip"></div><div class="tblwrap hidden" style="margin-top:8px"><table></table></div>';
+  host.appendChild(c);
+  $$('button', c).forEach(function (b) { b.addEventListener('click', function () { exportarGrafico(id, b.dataset.x); }); });
+  return c;
+}
+function legenda(itens) {
+  return itens.map(function (i) { return '<span><i class="' + (i.line ? 'line' : '') + '" style="background:' + i.cor + (i.op ? ';opacity:' + i.op : '') + '"></i>' + esc(i.t) + '</span>'; }).join('');
+}
+function exportarGrafico(id, tipo) {
+  var ch = CHARTS[id]; if (!ch) return alert('Gráfico ainda não calculado.');
+  var nome = 'grafico_' + id + '_' + ch.hash;
+  if (tipo === 'svg') baixar(nome + '.svg', ch.svg, 'image/svg+xml');
+  else if (tipo === 'csv') baixar(nome + '.csv', toCSV(ch.rows, ch.cols, ch.cab), 'text/csv;charset=utf-8');
+  else if (tipo === 'tab') { var tw = $('#card-' + id + ' .tblwrap'); tw.classList.toggle('hidden'); $('table', tw).innerHTML = tabelaHTML(ch.rows, ch.cols); }
+  else {
+    var img = new Image(), m = ch.svg.match(/viewBox="0 0 (\d+) (\d+)"/), w = +m[1], h = +m[2];
+    img.onload = function () {
+      var cv = document.createElement('canvas'); cv.width = w * 2; cv.height = h * 2;
+      var cx = cv.getContext('2d'); cx.scale(2, 2); cx.drawImage(img, 0, 0, w, h);
+      cv.toBlob(function (b) { baixar(nome + '.png', b, 'image/png'); }, 'image/png');
+    };
+    img.onerror = function () { alert('Não foi possível gerar PNG neste navegador; use a exportação SVG.'); };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(ch.svg);
+  }
+}
+function tabelaHTML(rows, cols) {
+  return '<thead><tr>' + cols.map(function (c) { return '<th class="' + (c.l ? 'l' : '') + '">' + esc(c.label) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    rows.map(function (r) { return '<tr>' + cols.map(function (c) { var v = typeof c.get === 'function' ? c.get(r) : r[c.key]; return '<td class="' + (c.l ? 'l' : '') + '">' + esc(typeof v === 'number' ? fmtN(v, c.d == null ? 0 : c.d) : (v == null ? '—' : v)) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody>';
+}
+function ligarTooltip(id, w, h, alvos) {
+  var el = $('#ch-' + id), tip = $('#card-' + id + ' .tip'), svg = $('svg', el);
+  if (!svg) return;
+  svg.addEventListener('mousemove', function (ev) {
+    var r = svg.getBoundingClientRect(), sx = (ev.clientX - r.left) * w / r.width, sy = (ev.clientY - r.top) * h / r.height;
+    var best = null, bd = Infinity;
+    alvos.forEach(function (a) { var d = a.box ? (sx >= a.box[0] && sx <= a.box[2] && sy >= a.box[1] && sy <= a.box[3] ? 0 : Infinity) : Math.abs(a.x - sx); if (d < bd) { bd = d; best = a; } });
+    if (!best || bd > 60) { tip.style.display = 'none'; hl(null); return; }
+    tip.innerHTML = best.html; tip.style.display = 'block';
+    var cr = el.closest('.chart-card').getBoundingClientRect(), px = ev.clientX - cr.left + 14, py = ev.clientY - cr.top + 10;
+    if (px + tip.offsetWidth > cr.width - 6) px = ev.clientX - cr.left - tip.offsetWidth - 14;
+    tip.style.left = px + 'px'; tip.style.top = py + 'px'; hl(best);
+  });
+  svg.addEventListener('mouseleave', function () { tip.style.display = 'none'; hl(null); });
+  function hl(a) { var g = $('.xhair', svg); if (!g) return; if (!a || a.box) { g.setAttribute('opacity', 0); return; } g.setAttribute('opacity', 1); g.setAttribute('transform', 'translate(' + a.x + ',0)'); }
+}
+
+/* --- linha com faixa P10–P90 e IC 95% da média */
+function graficoLinha(id, o) {
+  var el = $('#ch-' + id), C = paleta(), w = larguraDe(el), h = 300, m = { l: 84, r: 16, t: 14, b: 44 };
+  var pts = o.pts.filter(function (p) { return isFinite(p.mean); });
+  if (!pts.length) { el.innerHTML = '<p class="muted">Sem pontos viáveis nesta faixa.' + (o.vazio ? ' ' + o.vazio : '') + '</p>'; CHARTS[id] = null; return; }
+  var xs = pts.map(function (p) { return p.x; }), x0 = Math.min.apply(null, xs), x1 = Math.max.apply(null, xs);
+  if (x0 === x1) { x0 -= 1; x1 += 1; }
+  var lo = Math.min.apply(null, pts.map(function (p) { return Math.min(p.p10, p.lo); })), hi = Math.max.apply(null, pts.map(function (p) { return Math.max(p.p90, p.hi); }));
+  if (o.zero !== false) lo = Math.min(0, lo);
+  var yt = niceTicks(lo, hi, 5); lo = Math.min(lo, yt[0]); hi = Math.max(hi, yt[yt.length - 1]);
+  var X = function (v) { return m.l + (v - x0) / (x1 - x0) * (w - m.l - m.r); }, Y = function (v) { return h - m.b - (v - lo) / (hi - lo || 1) * (h - m.t - m.b); };
+  var b = eixos(C, X, Y, o.xTicks || niceTicks(x0, x1, 7), yt, o.xf || function (v) { return fmtN(v); }, o.yf || fmtRk, m, w, h, o.xLabel, o.yLabel);
+  // faixa P10–P90 (eventos)
+  var area = pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p.x).toFixed(1) + ',' + Y(p.p90).toFixed(1); }).join('') + pts.slice().reverse().map(function (p) { return 'L' + X(p.x).toFixed(1) + ',' + Y(p.p10).toFixed(1); }).join('') + 'Z';
+  b += S('path', { d: area, fill: C.band, opacity: 0.55 });
+  if (o.cur != null && isFinite(o.cur)) b += S('line', { x1: X(o.cur), x2: X(o.cur), y1: m.t, y2: h - m.b, stroke: C.text2, 'stroke-dasharray': '4 4', 'stroke-width': 1 }) + S('text', { x: X(o.cur) + 4, y: m.t + 10, fill: C.text2 }, 'atual');
+  b += S('path', { d: pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p.x).toFixed(1) + ',' + Y(p.mean).toFixed(1); }).join(''), fill: 'none', stroke: C.s1, 'stroke-width': 2, 'stroke-linejoin': 'round' });
+  // IC 95% da média (precisão Monte Carlo)
+  pts.forEach(function (p) {
+    var x = X(p.x), y1 = Y(p.lo), y2 = Y(p.hi);
+    b += S('line', { x1: x, x2: x, y1: y1, y2: y2, stroke: C.ci, 'stroke-width': 2 }) + S('line', { x1: x - 5, x2: x + 5, y1: y1, y2: y1, stroke: C.ci, 'stroke-width': 2 }) + S('line', { x1: x - 5, x2: x + 5, y1: y2, y2: y2, stroke: C.ci, 'stroke-width': 2 });
+    b += S('circle', { cx: x, cy: Y(p.mean), r: 4, fill: C.s1, stroke: C.surf, 'stroke-width': 2 });
+  });
+  b += '<g class="xhair" opacity="0">' + S('line', { x1: 0, x2: 0, y1: m.t, y2: h - m.b, stroke: C.axis, 'stroke-width': 1 }) + '</g>';
+  var svg = svgWrap(w, h, b, o.titulo, C); el.innerHTML = svg;
+  CHARTS[id] = { svg: svg, rows: o.rows, cols: o.cols, cab: o.cab, hash: o.hash };
+  ligarTooltip(id, w, h, pts.map(function (p) { return { x: X(p.x), html: o.tip(p) }; }));
+}
+
+/* --- histograma */
+function graficoHist(id, o) {
+  var el = $('#ch-' + id), C = paleta(), w = larguraDe(el), h = 310, m = { l: 66, r: 16, t: 44, b: 44 };
+  var v = o.values.filter(isFinite).slice().sort(function (a, b) { return a - b; }), n = v.length;
+  if (!n) { el.innerHTML = '<p class="muted">Sem dados.</p>'; return; }
+  var mn = v[0], mx = v[n - 1]; if (mx === mn) { mx = mn + 1; mn = mn - 1; }
+  var q1 = E.quantil(v, 0.25), q3 = E.quantil(v, 0.75), bw = 2 * (q3 - q1) / Math.cbrt(n), nb = bw > 0 ? Math.ceil((mx - mn) / bw) : 20;
+  nb = Math.max(8, Math.min(50, nb)); bw = (mx - mn) / nb;
+  var cnt = new Array(nb).fill(0); v.forEach(function (x) { cnt[Math.min(nb - 1, Math.floor((x - mn) / bw))]++; });
+  var cmax = Math.max.apply(null, cnt), yt = niceTicks(0, cmax / n, 4);
+  var top = Math.max(cmax / n, yt[yt.length - 1]);
+  var xt = niceTicks(mn, mx, 6), X = function (x) { return m.l + (x - mn) / (mx - mn) * (w - m.l - m.r); }, Y = function (f) { return h - m.b - f / top * (h - m.t - m.b); };
+  var b = eixos(C, X, Y, xt.filter(function (t) { return t >= mn && t <= mx; }), yt, fmtRk, function (f) { return fmtP(f, 0); }, m, w, h, o.xLabel, 'Frequência relativa');
+  var alvos = [];
+  cnt.forEach(function (c, i) {
+    var xa = X(mn + i * bw) + 1, xb = X(mn + (i + 1) * bw) - 1, y = Y(c / n);
+    b += S('rect', { x: xa, y: y, width: Math.max(1, xb - xa), height: h - m.b - y, fill: C.s1, opacity: 0.85, rx: 2 });
+    alvos.push({ box: [xa - 1, m.t, xb + 1, h - m.b], html: '<b>' + fmtR(mn + i * bw) + ' a ' + fmtR(mn + (i + 1) * bw) + '</b><br>' + c + ' repetições (' + fmtP(c / n) + ')' });
+  });
+  // IC da média: faixa estreita
+  if (isFinite(o.icInf)) b += S('rect', { x: X(o.icInf), y: m.t, width: Math.max(2, X(o.icSup) - X(o.icInf)), height: h - m.t - m.b, fill: C.ci, opacity: 0.35 });
+  (o.marks || []).forEach(function (mk, i) {
+    if (!isFinite(mk.x) || mk.x < mn || mk.x > mx) return;
+    var x = X(mk.x);
+    b += S('line', { x1: x, x2: x, y1: m.t - 4 - (i % 3) * 12, y2: h - m.b, stroke: mk.cor, 'stroke-width': mk.w || 1.5, 'stroke-dasharray': mk.dash || null });
+    b += S('text', { x: x, y: m.t - 6 - (i % 3) * 12, 'text-anchor': 'middle', fill: C.text2, 'font-size': 10 }, esc(mk.t));
+  });
+  var svg = svgWrap(w, h, b, o.titulo, C); el.innerHTML = svg;
+  CHARTS[id] = { svg: svg, rows: cnt.map(function (c, i) { return { de: mn + i * bw, ate: mn + (i + 1) * bw, n: c, f: c / n }; }), cols: [{ key: 'de', label: 'Limite inferior (R$)', d: 0 }, { key: 'ate', label: 'Limite superior (R$)', d: 0 }, { key: 'n', label: 'Repetições' }, { key: 'f', label: 'Frequência relativa', d: 4 }], cab: o.cab, hash: o.hash };
+  ligarTooltip(id, w, h, alvos);
+}
+
+/* --- mapa de calor */
+function graficoCalor(id, o) {
+  var el = $('#ch-' + id), C = paleta(), w = larguraDe(el), nx = o.xs.length, ny = o.ys.length;
+  var m = { l: 70, r: 16, t: 12, b: 48 }, cw = (w - m.l - m.r) / nx, chh = Math.max(26, Math.min(44, 260 / ny)), h = m.t + m.b + chh * ny;
+  var vals = []; o.z.forEach(function (r) { r.forEach(function (c) { if (c && isFinite(c.v)) vals.push(c.v); }); });
+  var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals); if (!(hi > lo)) hi = lo + 1;
+  function hex(c) { c = c.replace('#', ''); return [parseInt(c.substr(0, 2), 16), parseInt(c.substr(2, 2), 16), parseInt(c.substr(4, 2), 16)]; }
+  var a = hex(C.seq0), z = hex(C.seq1);
+  function lum(t) { var c = a.map(function (x, i) { return (x + (z[i] - x) * t) / 255; }); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; }
+  function cor(t) { return 'rgb(' + a.map(function (x, i) { return Math.round(x + (z[i] - x) * t); }).join(',') + ')'; }
+  var b = '', alvos = [];
+  o.ys.forEach(function (yv, j) {
+    var y = m.t + (ny - 1 - j) * chh;
+    b += S('text', { x: m.l - 6, y: y + chh / 2 + 4, 'text-anchor': 'end', fill: C.muted }, esc(fmtN(yv)));
+    o.xs.forEach(function (xv, i) {
+      var c = o.z[j][i], x = m.l + i * cw;
+      if (!c || !isFinite(c.v)) {
+        b += S('rect', { x: x + 1, y: y + 1, width: cw - 2, height: chh - 2, fill: C.surf2, rx: 3 }) + S('text', { x: x + cw / 2, y: y + chh / 2 + 4, 'text-anchor': 'middle', fill: C.muted, 'font-size': 10 }, 'inviável');
+        alvos.push({ box: [x, y, x + cw, y + chh], html: '<b>' + fmtN(xv) + ' g × ' + fmtN(yv) + ' participantes</b><br>Inviável: ' + esc((c && c.motivos || []).join('; ')) });
+        return;
+      }
+      var t = (c.v - lo) / (hi - lo);
+      b += S('rect', { x: x + 1, y: y + 1, width: cw - 2, height: chh - 2, fill: cor(t), rx: 3 });
+      if (cw > 46) b += S('text', { x: x + cw / 2, y: y + chh / 2 + 4, 'text-anchor': 'middle', fill: lum(t) < 0.45 ? '#ffffff' : '#0b0b0b', 'font-size': 10 }, esc(fmtRk(c.v).replace('R$ ', '')));
+      if (c.atual) b += S('rect', { x: x + 2, y: y + 2, width: cw - 4, height: chh - 4, fill: 'none', stroke: C.text, 'stroke-width': 2, rx: 3 });
+      alvos.push({ box: [x, y, x + cw, y + chh], html: '<b>' + fmtN(xv) + ' g por lote × ' + fmtN(yv) + ' participantes</b><br>Lotes ofertados: ' + c.k + '<br>Líquida média: ' + fmtR(c.v) + '<br>P10–P90: ' + fmtR(c.p10) + ' a ' + fmtR(c.p90) + '<br>IC 95% média: ± ' + fmtR(c.v - c.lo) });
+    });
+  });
+  o.xs.forEach(function (xv, i) { b += S('text', { x: m.l + i * cw + cw / 2, y: h - m.b + 16, 'text-anchor': 'middle', fill: C.muted }, esc(fmtN(xv) + ' g')); });
+  b += S('text', { x: (m.l + w - m.r) / 2, y: h - 8, 'text-anchor': 'middle', fill: C.text2 }, esc(o.xLabel));
+  b += S('text', { x: 12, y: (m.t + h - m.b) / 2, 'text-anchor': 'middle', fill: C.text2, transform: 'rotate(-90 12 ' + ((m.t + h - m.b) / 2) + ')' }, esc(o.yLabel));
+  var svg = svgWrap(w, h, b, o.titulo, C); el.innerHTML = svg;
+  CHARTS[id] = { svg: svg, rows: o.rows, cols: o.cols, cab: o.cab, hash: o.hash };
+  ligarTooltip(id, w, h, alvos);
+  var leg = $('#card-' + id + ' .legend'); leg.innerHTML = '<span>Menor ' + fmtR(lo) + '</span><span style="display:inline-block;width:120px;height:10px;border-radius:2px;background:linear-gradient(90deg,' + C.seq0 + ',' + C.seq1 + ')"></span><span>Maior ' + fmtR(hi) + '</span><span>contorno = cenário mais próximo do atual</span>';
+}
+
+/* --- convergência */
+function graficoConv(id, o) {
+  var el = $('#ch-' + id), C = paleta(), w = larguraDe(el), h = 280, m = { l: 84, r: 16, t: 14, b: 44 };
+  var x = o.values, n = x.length; if (n < 2) { el.innerHTML = '<p class="muted">Sem dados.</p>'; return; }
+  var cks = {}, nPts = 150, i;
+  for (i = 0; i <= nPts; i++) cks[Math.min(n, Math.max(10, Math.round(10 * Math.pow(n / 10, i / nPts))))] = 1;
+  var pts = [], s = 0, s2 = 0;
+  for (i = 0; i < n; i++) {
+    s += x[i]; s2 += x[i] * x[i]; var k = i + 1;
+    if (cks[k] && k >= 2) { var mu = s / k, sd = Math.sqrt(Math.max(0, (s2 - k * mu * mu) / (k - 1))), ep = sd / Math.sqrt(k); pts.push({ k: k, m: mu, lo: mu - 1.96 * ep, hi: mu + 1.96 * ep, ep: ep }); }
+  }
+  var lo = Math.min.apply(null, pts.map(function (p) { return p.lo; })), hi = Math.max.apply(null, pts.map(function (p) { return p.hi; }));
+  var yt = niceTicks(lo, hi, 5); lo = Math.min(lo, yt[0]); hi = Math.max(hi, yt[yt.length - 1]);
+  var lx0 = Math.log10(10), lx1 = Math.log10(n), X = function (k) { return m.l + (Math.log10(k) - lx0) / (lx1 - lx0 || 1) * (w - m.l - m.r); }, Y = function (v) { return h - m.b - (v - lo) / (hi - lo || 1) * (h - m.t - m.b); };
+  var xt = [10, 20, 50, 100, 200, 500, 1000, 2000, 5000, 10000, 20000, 50000].filter(function (t) { return t <= n; });
+  var b = eixos(C, X, Y, xt, yt, function (v) { return fmtN(v); }, fmtRk, m, w, h, 'Repetições acumuladas (escala log)', 'Média acumulada (R$)');
+  b += S('path', { d: pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p.k).toFixed(1) + ',' + Y(p.hi).toFixed(1); }).join('') + pts.slice().reverse().map(function (p) { return 'L' + X(p.k).toFixed(1) + ',' + Y(p.lo).toFixed(1); }).join('') + 'Z', fill: C.ci, opacity: 0.22 });
+  var fim = pts[pts.length - 1];
+  b += S('line', { x1: m.l, x2: w - m.r, y1: Y(fim.m), y2: Y(fim.m), stroke: C.text2, 'stroke-dasharray': '3 4' });
+  b += S('path', { d: pts.map(function (p, i) { return (i ? 'L' : 'M') + X(p.k).toFixed(1) + ',' + Y(p.m).toFixed(1); }).join(''), fill: 'none', stroke: C.s1, 'stroke-width': 2 });
+  b += '<g class="xhair" opacity="0">' + S('line', { x1: 0, x2: 0, y1: m.t, y2: h - m.b, stroke: C.axis }) + '</g>';
+  var svg = svgWrap(w, h, b, o.titulo, C); el.innerHTML = svg;
+  CHARTS[id] = { svg: svg, rows: pts, cols: [{ key: 'k', label: 'Repetições' }, { key: 'm', label: 'Média acumulada (R$)', d: 2 }, { key: 'ep', label: 'Erro padrão MC (R$)', d: 2 }, { key: 'lo', label: 'IC95 inf (R$)', d: 2 }, { key: 'hi', label: 'IC95 sup (R$)', d: 2 }], cab: o.cab, hash: o.hash };
+  ligarTooltip(id, w, h, pts.map(function (p) { return { x: X(p.k), html: '<b>' + fmtN(p.k) + ' repetições</b><br>Média: ' + fmtR(p.m) + '<br>IC 95%: ' + fmtR(p.lo) + ' a ' + fmtR(p.hi) + '<br>Erro padrão: ' + fmtR(p.ep) }; }));
+}
+
+/* --- tornado de sensibilidade */
+function graficoTornado(id, o) {
+  var el = $('#ch-' + id), C = paleta(), w = larguraDe(el), rows = o.rows, rh = 30, m = { l: Math.min(250, w * 0.38), r: 20, t: 10, b: 40 }, h = m.t + m.b + rh * rows.length;
+  var ext = 0; rows.forEach(function (r) { [r.lo, r.hi, r.loI, r.loS, r.hiI, r.hiS].forEach(function (v) { if (isFinite(v)) ext = Math.max(ext, Math.abs(v)); }); });
+  ext = ext || 1; var xt = niceTicks(-ext, ext, 6), lo = Math.min(-ext, xt[0]), hi = Math.max(ext, xt[xt.length - 1]);
+  var X = function (v) { return m.l + (v - lo) / (hi - lo) * (w - m.l - m.r); };
+  var b = '', alvos = [];
+  xt.forEach(function (v) { b += S('line', { x1: X(v), x2: X(v), y1: m.t, y2: h - m.b, stroke: C.grid }) + S('text', { x: X(v), y: h - m.b + 15, 'text-anchor': 'middle', fill: C.muted }, esc(fmtRk(v))); });
+  b += S('line', { x1: X(0), x2: X(0), y1: m.t, y2: h - m.b, stroke: C.axis, 'stroke-width': 1.5 });
+  rows.forEach(function (r, i) {
+    var y = m.t + i * rh;
+    b += S('text', { x: m.l - 8, y: y + rh / 2 + 4, 'text-anchor': 'end', fill: C.text2 }, esc(r.label));
+    [['lo', C.s2, -6], ['hi', C.s1, 4]].forEach(function (s) {
+      var v = r[s[0]]; if (!isFinite(v)) return;
+      var x0 = X(Math.min(0, v)), x1 = X(Math.max(0, v)), yy = y + rh / 2 + s[2] - 3;
+      b += S('rect', { x: x0, y: yy, width: Math.max(1, x1 - x0), height: 8, fill: s[1], rx: 2 });
+      var a = r[s[0] + 'I'], z = r[s[0] + 'S'];
+      if (isFinite(a)) b += S('line', { x1: X(a), x2: X(z), y1: yy + 4, y2: yy + 4, stroke: C.text, 'stroke-width': 1 });
+    });
+    alvos.push({ box: [0, y, w, y + rh], html: '<b>' + esc(r.label) + '</b><br>Valor baixo (' + esc(r.vLo) + '): ' + fmtR(r.lo) + ' (IC ' + fmtR(r.loI) + ' a ' + fmtR(r.loS) + ')<br>Valor alto (' + esc(r.vHi) + '): ' + fmtR(r.hi) + ' (IC ' + fmtR(r.hiI) + ' a ' + fmtR(r.hiS) + ')' });
+  });
+  b += S('text', { x: (m.l + w - m.r) / 2, y: h - 6, 'text-anchor': 'middle', fill: C.text2 }, 'Diferença na arrecadação líquida média vs. cenário atual (R$)');
+  var svg = svgWrap(w, h, b, o.titulo, C); el.innerHTML = svg;
+  CHARTS[id] = { svg: svg, rows: o.tab, cols: o.cols, cab: o.cab, hash: o.hash };
+  ligarTooltip(id, w, h, alvos);
+}
+
+/* ============================================================ fluxo de atualização */
+var agendarPrevia = debounce(function () { rodarPrevia(); }, 450);
+function errosAtuais() { return validarCfg(state.cfg).concat(validarInventario(state.cfg.inventario)); }
+function aoMudar() {
+  atualizarHash();
+  var erros = errosAtuais();
+  $('#cfg-msg').innerHTML = erros.length ? '<div class="note crit"><b>Configuração inválida — simulação suspensa.</b><ul class="err-list">' + erros.slice(0, 12).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + (erros.length > 12 ? '<li>… e mais ' + (erros.length - 12) + '</li>' : '') + '</ul></div>' : '';
+  if (state.jobs.ana) cancelarJob('ana');
+  if (state.jobs.opt) { cancelarJob('opt'); $('#opt-prog').textContent = 'Otimização cancelada: a configuração mudou durante a execução.'; $('#btn-opt-cancel').disabled = true; }
+  renderOferta(); renderInventario();
+  marcarStale();
+  if (!erros.length) agendarPrevia();
+  status();
+}
+function marcarStale() {
+  var h = state.hash, run = !!state.jobs.ana;
+  zona('res-zone', state.res, run ? 'Recalculando para a configuração <b class="mono">' + h + '</b>… Os valores abaixo pertencem à configuração anterior (<b class="mono">' + (state.res ? state.res.hash : '') + '</b>) e não devem ser lidos como atuais.' : null);
+  zona('opt-zone', state.opt, 'Estes resultados de otimização referem-se à configuração <b class="mono">' + (state.opt ? state.opt.hash : '') + '</b>, diferente da atual (<b class="mono">' + h + '</b>). Execute a otimização novamente.');
+  zona('sens-zone', state.res && state.res.tipo === 'completa' ? state.res : null, 'A sensibilidade exibida refere-se à configuração <b class="mono">' + (state.res ? state.res.hash : '') + '</b>. Execute a análise completa para a configuração atual.');
+  zona('aud-zone', state.aud, 'Esta auditoria refere-se à configuração <b class="mono">' + (state.aud ? state.aud.hash : '') + '</b>, diferente da atual. Clique em “Auditar repetição”.');
+}
+function zona(id, obj, txt) {
+  var z = $('#' + id), stale = !!(obj && obj.hash !== state.hash);
+  z.classList.toggle('stale', stale);
+  var b = $('.stale-banner', z); b.innerHTML = stale ? '<b>Resultado desatualizado.</b> ' + (txt || ('Refere-se à configuração ' + obj.hash + '; a atual é ' + state.hash + '. Recalculando…')) : '';
+}
+function status(prog) {
+  var pill = $('#st-pill'), t = $('#st-text'), erros = errosAtuais();
+  pill.className = 'pill';
+  if (erros.length) { pill.classList.add('err'); t.textContent = 'Configuração inválida'; }
+  else if (state.jobs.ana) { pill.classList.add('run'); t.textContent = state.jobs.ana.kind === 'completa' ? 'Executando análise completa…' : 'Calculando prévia…'; }
+  else if (!state.res || state.res.hash !== state.hash) { pill.classList.add('stale'); t.textContent = 'Aguardando cálculo'; }
+  else { pill.classList.add('ok'); t.textContent = 'Atualizado — ' + (state.res.tipo === 'completa' ? 'análise completa' : 'prévia'); }
+  $('#btn-cancel').disabled = !state.jobs.ana;
+  $('#btn-full').disabled = !!erros.length;
+  if (!state.jobs.ana) {
+    $('#st-bar').style.width = state.res && state.res.hash === state.hash ? '100%' : '0';
+    $('#st-reps').textContent = state.res && state.res.hash === state.hash ? fmtN(state.res.reps) + '/' + fmtN(state.res.reps) + ' repetições' : '';
+  }
+}
+function rodarPrevia() { rodarAnalise('previa'); }
+function rodarAnalise(kind) {
+  if (errosAtuais().length) return;
+  var cfg = clone(state.cfg);
+  iniciarJob('ana', kind, cfg, {
+    progress: function (p) { $('#st-bar').style.width = (100 * p.feito / p.total).toFixed(1) + '%'; $('#st-reps').textContent = p.fase + ': ' + fmtN(p.feito) + '/' + fmtN(p.total) + ' repetições'; },
+    done: function (res, job) {
+      state.res = { hash: job.hash, cfg: job.cfg, data: res, tipo: res.tipo, reps: res.reps, quando: new Date().toLocaleString('pt-BR'), ms: Date.now() - job.t0 };
+      renderResultados(); renderSens(); marcarStale(); status();
+    },
+    error: function (e) { $('#global-msg').innerHTML = '<div class="note crit">Erro na simulação: <code>' + esc(e) + '</code></div>'; status(); }
+  });
+  marcarStale(); status();
+}
+
+/* ============================================================ inventário */
+function renderOferta() {
+  var c = state.cfg, P = E.prepInventario(c), R = E.resolver(c, null, P, false), h = '';
+  if (c.modo === 'A') h += '<div class="note"><b>Experimento A — seleção de amostras existentes.</b> Cada lote é uma amostra física, com a massa registrada no inventário. Alterar o número de lotes altera também a <b>massa total ofertada</b>; comparações entre quantidades diferentes de lotes envolvem quantidades físicas diferentes. A massa por lote não se aplica.</div>';
+  else h += '<div class="note"><b>Experimento B — fracionamento de estoque fixo.</b> O estoque de cada café (soma das massas das suas amostras) é dividido em lotes de ' + fmtN(c.massaLote) + ' g de um único café; nenhum lote mistura cafés. Com esta massa há <b>' + R.capEstoque + ' lotes viáveis</b>. Lotes maiores que uma amostra pressupõem reunir amostras do mesmo café (regra explícita); o resto que não completa um lote fica como massa residual.</div>';
+  h += '<p>Lotes efetivamente ofertados: <b>' + R.k + '</b> de ' + R.kReq + ' solicitados · limite por estoque: ' + R.capEstoque + ' · limite por duração: ' + (isFinite(R.capTempo) ? R.capTempo : 'sem limite') + ' · participantes considerados: ' + R.N + '</p>';
+  if (R.ativas.length) h += '<div class="note warn">Restrições ativas: ' + R.ativas.map(esc).join('; ') + '.</div>';
+  if (c.modo === 'A') { var exc = P.amostras.length - P.amostras.filter(function (a) { return a.massa >= c.gMin && a.massa <= c.gMax; }).length; if (exc) h += '<div class="note warn">' + exc + ' amostra(s) fora da gramatura permitida [' + c.gMin + '; ' + c.gMax + '] g foram excluídas da oferta.</div>'; }
+  if (c.ordem === 'manual') h += '<div class="note">Ordem manual: apenas amostras (modo A) ou cafés (modo B) com <code>ordem_manual</code> preenchida entram, na ordem crescente desse número.</div>';
+  $('#oferta-msg').innerHTML = h;
+}
+function renderInventario() {
+  var foco = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.f ? { i: document.activeElement.dataset.i, f: document.activeElement.dataset.f } : null;
+  renderInventario2();
+  if (foco) { var el = $('#tbl-inv input[data-i="' + foco.i + '"][data-f="' + foco.f + '"]'); if (el) el.focus(); }
+}
+function renderInventario2() {
+  var c = state.cfg, inv = c.inventario, P = E.prepInventario(c), erros = validarInventario(inv);
+  $('#inv-msg').innerHTML = (erros.length ? '<div class="note crit"><b>Inventário com problemas:</b><ul class="err-list">' + erros.slice(0, 15).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul></div>' : '') +
+    (inv.length > 50 ? '<div class="note warn">O inventário tem ' + inv.length + ' amostras; o informado foi “até 50”, sujeito à confirmação.</div>' : '');
+  $('#inv-count').textContent = '(' + inv.length + ' amostras, ' + P.cafes.length + ' cafés, ' + fmtN(P.massaTotal / 1000, 2) + ' kg no total)';
+  var g = c.massaLote;
+  $('#tbl-cafes').innerHTML = '<thead><tr><th class="l">Café</th><th>Colocação</th><th>Nota</th><th class="l">Origem da nota</th><th>Amostras</th><th>Massa disponível (g)</th><th>Lotes viáveis com ' + fmtN(g) + ' g (modo B)</th><th>Resíduo (g)</th></tr></thead><tbody>' +
+    P.cafes.map(function (cf) {
+      var orig = inv.filter(function (s) { return s.cafe_id === cf.id; }).map(function (s) { return s.origem_nota; });
+      var n = Math.floor(cf.massa / g + 1e-9);
+      return '<tr><td class="l">' + esc(cf.id) + '</td><td>' + cf.colocacao + '</td><td>' + fmtN(cf.nota, 2) + '</td><td class="l">' + tagOrig(orig[0]) + '</td><td>' + cf.n + '</td><td>' + fmtN(cf.massa, 1) + '</td><td>' + n + '</td><td>' + fmtN(cf.massa - n * g, 1) + '</td></tr>';
+    }).join('') + '</tbody>';
+  var cols = [['amostra_id', 'ID', 't'], ['cafe_id', 'Café', 't'], ['colocacao', 'Colocação', 'n'], ['nota', 'Nota (pontos)', 'n'], ['massa_g', 'Massa (g)', 'n'], ['ordem_manual', 'Ordem manual', 'n']];
+  $('#tbl-inv').innerHTML = '<thead><tr>' + cols.map(function (x) { return '<th class="' + (x[2] === 't' ? 'l' : '') + '">' + x[1] + '</th>'; }).join('') + '<th class="l">Origem nota</th><th class="l">Origem massa</th><th></th></tr></thead><tbody>' +
+    inv.map(function (s, i) {
+      return '<tr>' + cols.map(function (x) { var v = s[x[0]]; return '<td class="' + (x[2] === 't' ? 'l' : '') + '"><input class="cell ' + (x[2] === 't' ? 'l' : '') + '" data-i="' + i + '" data-f="' + x[0] + '" value="' + esc(v == null ? '' : (x[2] === 'n' ? String(v).replace('.', ',') : v)) + '"' + (x[0] === 'ordem_manual' ? ' placeholder="—"' : '') + '></td>'; }).join('') +
+        '<td class="l">' + tagOrig(s.origem_nota) + '</td><td class="l">' + tagOrig(s.origem_massa) + '</td><td><button class="btn small" data-del="' + i + '" title="Remover amostra">×</button></td></tr>';
+    }).join('') + '</tbody>';
+}
+function tagOrig(o) { return '<span class="tag ' + (o === 'sintético' ? 'sint' : o === 'informado' ? 'inf' : '') + '">' + esc(o || '—') + '</span>'; }
+function ligarInventario() {
+  $('#tbl-inv').addEventListener('change', function (ev) {
+    var t = ev.target; if (!t.dataset || t.dataset.f == null) return;
+    var i = +t.dataset.i, f = t.dataset.f, inv = state.cfg.inventario, s = inv[i], raw = t.value.trim(), v;
+    if (f === 'amostra_id' || f === 'cafe_id') v = raw;
+    else if (f === 'ordem_manual') v = raw === '' ? null : parseFloat(raw.replace(',', '.'));
+    else v = parseFloat(raw.replace(',', '.'));
+    if (f !== 'amostra_id' && f !== 'cafe_id' && f !== 'ordem_manual' && !isFinite(v)) { t.classList.add('bad'); return; }
+    if ((f === 'nota' || f === 'colocacao') && s.cafe_id) { // propaga para todas as amostras do mesmo café
+      inv.forEach(function (x) { if (x.cafe_id === s.cafe_id) { x[f] = v; if (f === 'nota') x.origem_nota = 'editado'; } });
+    } else { s[f] = v; if (f === 'massa_g') s.origem_massa = 'editado'; }
+    if (f === 'cafe_id') { var o = inv.filter(function (x, j) { return j !== i && x.cafe_id === v; })[0]; if (o) { s.nota = o.nota; s.colocacao = o.colocacao; s.origem_nota = o.origem_nota; } }
+    aoMudar();
+  });
+  $('#tbl-inv').addEventListener('click', function (ev) {
+    var d = ev.target.dataset && ev.target.dataset.del; if (d == null) return;
+    state.cfg.inventario.splice(+d, 1); aoMudar();
+  });
+  $('#btn-inv-add').addEventListener('click', function () {
+    var inv = state.cfg.inventario, last = inv[inv.length - 1] || { cafe_id: 'cafe_01', colocacao: 1, nota: 90, origem_nota: 'editado' }, n = inv.length + 1, id;
+    do { id = 'A' + String(n++).padStart(3, '0'); } while (inv.some(function (s) { return s.amostra_id === id; }));
+    inv.push({ amostra_id: id, cafe_id: last.cafe_id, colocacao: last.colocacao, nota: last.nota, massa_g: 200, ordem_manual: null, origem_nota: last.origem_nota, origem_massa: 'editado' });
+    aoMudar();
+  });
+  $('#btn-inv-gen').addEventListener('click', function () {
+    var c = state.cfg;
+    if (!confirm('Substituir o inventário atual por um inventário SINTÉTICO com ' + c.nCafes + ' cafés × ' + c.porCafe + ' amostras?')) return;
+    c.inventario = E.inventarioSintetico(c.nCafes, c.porCafe, c.semente); aoMudar();
+  });
+  $('#btn-inv-csv').addEventListener('click', function () {
+    baixar('inventario_' + state.hash + '.csv', toCSV(state.cfg.inventario, ['amostra_id', 'cafe_id', 'colocacao', 'nota', 'massa_g', 'ordem_manual', 'origem_nota', 'origem_massa'].map(function (k) { return { key: k, label: k }; })), 'text/csv;charset=utf-8');
+  });
+  $('#file-inv').addEventListener('change', function (ev) {
+    var f = ev.target.files[0]; if (!f) return; ev.target.value = '';
+    var rd = new FileReader();
+    rd.onload = function () { var r = importarInventarioCSV(String(rd.result)); if (r.erros.length) $('#inv-msg').innerHTML = '<div class="note crit"><b>Importação recusada (' + esc(f.name) + '):</b><ul class="err-list">' + r.erros.slice(0, 20).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>O inventário atual foi mantido.</div>'; else { state.cfg.inventario = r.inv; aoMudar(); $('#inv-msg').insertAdjacentHTML('afterbegin', '<div class="note good">' + r.inv.length + ' amostras importadas de ' + esc(f.name) + '.</div>'); } };
+    rd.readAsText(f, 'utf-8');
+  });
+}
+function parseCSV(txt) {
+  txt = txt.replace(/^﻿/, '');
+  var linhas = txt.split(/\r?\n/).filter(function (l) { return l.trim() !== '' && !/^\s*#/.test(l); });
+  if (!linhas.length) return { sep: ';', rows: [] };
+  var sep = (linhas[0].match(/;/g) || []).length >= (linhas[0].match(/,/g) || []).length ? ';' : ',';
+  if ((linhas[0].match(/\t/g) || []).length > (linhas[0].match(new RegExp(sep === ';' ? ';' : ',', 'g')) || []).length) sep = '\t';
+  var rows = linhas.map(function (l) {
+    var out = [], cur = '', q = false;
+    for (var i = 0; i < l.length; i++) { var ch = l[i]; if (q) { if (ch === '"' && l[i + 1] === '"') { cur += '"'; i++; } else if (ch === '"') q = false; else cur += ch; } else if (ch === '"') q = true; else if (ch === sep) { out.push(cur); cur = ''; } else cur += ch; }
+    out.push(cur); return out.map(function (x) { return x.trim(); });
+  });
+  return { sep: sep, rows: rows };
+}
+function importarInventarioCSV(txt) {
+  var p = parseCSV(txt), erros = [];
+  if (p.rows.length < 2) return { erros: ['Arquivo sem linhas de dados.'], inv: [] };
+  var cab = p.rows[0].map(function (h) { return h.toLowerCase().replace(/\s+/g, '_'); }), req = ['amostra_id', 'cafe_id', 'colocacao', 'nota', 'massa_g'];
+  var falt = req.filter(function (r) { return cab.indexOf(r) < 0; });
+  if (falt.length) return { erros: ['Colunas obrigatórias ausentes: ' + falt.join(', ') + '. Encontradas: ' + cab.join(', ')], inv: [] };
+  function num(v) { if (v == null || v === '') return NaN; v = String(v).replace(/\s/g, ''); if (p.sep !== ',') v = v.replace(/\.(?=\d{3}(\D|$))/g, '').replace(',', '.'); return Number(v); }
+  var inv = p.rows.slice(1).map(function (r, i) {
+    if (r.length !== cab.length) erros.push('Linha ' + (i + 2) + ': ' + r.length + ' colunas (esperado ' + cab.length + ')');
+    var o = {}; cab.forEach(function (h, j) { o[h] = r[j]; });
+    return { amostra_id: o.amostra_id, cafe_id: o.cafe_id, colocacao: num(o.colocacao), nota: num(o.nota), massa_g: num(o.massa_g), ordem_manual: o.ordem_manual == null || o.ordem_manual === '' ? null : num(o.ordem_manual), origem_nota: 'importado', origem_massa: 'importado' };
+  });
+  erros = erros.concat(validarInventario(inv).map(function (e) { return e.replace(/^Linha (\d+)/, function (m, n) { return 'Linha ' + (+n + 1) + ' do arquivo'; }); }));
+  return { erros: erros, inv: inv };
+}
+
+/* ============================================================ resultados */
+function cabecalhoExport(r) {
+  return ['Simulador de leilão de cafés v' + E.VERSION + ' — dados SINTÉTICOS (hipóteses editáveis), não cotações', 'Configuração ' + r.hash + ' · semente ' + r.cfg.semente + ' · ' + r.reps + ' repetições · ' + (r.tipo === 'completa' ? 'análise completa' : 'prévia') + ' · ' + r.quando,
+    'P10/P90 = quantis dos eventos simulados; IC95 = precisão da média Monte Carlo'];
+}
+function ptsDe(cen, grupo) {
+  return cen.filter(function (c) { return c.grupo === grupo; }).map(function (c) {
+    if (!c.stats) return { x: c.x, mean: NaN, c: c };
+    var L = c.stats.liquida; return { x: c.x, mean: L.media, p10: L.p10, p90: L.p90, lo: L.icInf, hi: L.icSup, c: c };
+  });
+}
+function tipPt(p, rotX) {
+  var s = p.c.stats;
+  return '<b>' + rotX(p) + '</b><br>Líquida média: ' + fmtR(p.mean) + '<br>IC 95% da média: ' + fmtR(p.lo) + ' a ' + fmtR(p.hi) + '<br>P10–P90 (eventos): ' + fmtR(p.p10) + ' a ' + fmtR(p.p90) +
+    '<br>Bruta média: ' + fmtR(s.bruta.media) + '<br>Lotes: ' + p.c.k + ' ofertados · ' + fmtN(s.vendidos.media, 1) + ' vendidos<br>Massa ofertada: ' + fmtN(s.massaOf.media) + ' g<br>Vencedores: ' + fmtN(s.vencedores.media, 1);
+}
+var COLS_VARR = [{ key: 'grupo', label: 'varredura', l: 1 }, { key: 'x', label: 'valor_x' }, { key: 'y', label: 'valor_y' }, { key: 'modo', label: 'modo', l: 1 }, { key: 'N', label: 'participantes' }, { key: 'k', label: 'lotes_ofertados' }, { key: 'g', label: 'massa_lote_g' },
+  { key: 'viavel', label: 'viavel' }, { get: function (r) { return (r.motivos || []).join(' | '); }, label: 'motivos_inviabilidade', l: 1 },
+  { get: function (r) { return r.stats && r.stats.liquida.media; }, label: 'liquida_media', d: 0 }, { get: function (r) { return r.stats && r.stats.liquida.mediana; }, label: 'liquida_mediana', d: 0 },
+  { get: function (r) { return r.stats && r.stats.liquida.p10; }, label: 'liquida_p10', d: 0 }, { get: function (r) { return r.stats && r.stats.liquida.p90; }, label: 'liquida_p90', d: 0 },
+  { get: function (r) { return r.stats && r.stats.liquida.ep; }, label: 'erro_mc', d: 1 }, { get: function (r) { return r.stats && r.stats.liquida.icInf; }, label: 'ic95_inf', d: 0 }, { get: function (r) { return r.stats && r.stats.liquida.icSup; }, label: 'ic95_sup', d: 0 },
+  { get: function (r) { return r.stats && r.stats.bruta.media; }, label: 'bruta_media', d: 0 }, { get: function (r) { return r.stats && r.stats.vendidos.media; }, label: 'vendidos_media', d: 2 },
+  { get: function (r) { return r.stats && r.stats.massaOf.media; }, label: 'massa_ofertada_g', d: 1 }, { get: function (r) { return r.stats && r.stats.probMeta.p; }, label: 'prob_meta', d: 4 }];
+
+function renderResultados() {
+  var r = state.res; if (!r) return;
+  var d = r.data, cen = d.cenarios, at = cen[0], s = at.stats, cfg = r.cfg;
+  $('#res-id').innerHTML = '<b>' + (r.tipo === 'completa' ? 'Análise completa' : 'Prévia rápida') + '</b> · configuração <b class="mono">' + r.hash + '</b> · semente ' + cfg.semente + ' · <b>' + fmtN(r.reps) + ' repetições concluídas</b> por cenário · ' + cen.filter(function (c) { return c.stats; }).length + ' cenários · ' + fmtN(r.ms / 1000, 1) + ' s · ' + esc(r.quando) +
+    '<br>Cenário atual: modo ' + cfg.modo + ', ' + at.N + ' participantes, ' + at.k + ' lotes' + (cfg.modo === 'B' ? ' de ' + cfg.massaLote + ' g' : ' (amostras existentes)') + ', mecanismo ' + (cfg.mecanismo === 'segundo' ? 'segundo preço com reserva' : 'inglês com incremento de ' + fmtR(cfg.incremento)) + '.';
+  $('#res-ativas').innerHTML = at.ativas.length ? '<div class="note warn">Restrições ativas no cenário atual: ' + at.ativas.map(esc).join('; ') + '.</div>' : '';
+  var L = s.liquida;
+  var k = [
+    ['Arrecadação líquida média', fmtR(L.media), 'IC 95% da média: ' + fmtR(L.icInf) + ' a ' + fmtR(L.icSup) + ' · erro MC ' + fmtR(L.ep), 'hero'],
+    ['Mediana e P10–P90 (eventos)', fmtR(L.mediana), 'P10 ' + fmtR(L.p10) + ' · P90 ' + fmtR(L.p90)],
+    ['Receita bruta dos lotes', fmtR(s.bruta.media), 'mediana ' + fmtR(s.bruta.mediana) + ' · P10–P90 ' + fmtRk(s.bruta.p10) + '–' + fmtRk(s.bruta.p90)],
+    ['Receita de inscrição', fmtR(s.inscricao.media), at.N + ' × ' + fmtR(cfg.taxa) + ' (separada dos lotes)'],
+    ['Custos', fmtR(s.custos.media), 'fixo + participantes + lotes + gramas'],
+    ['Probabilidade de atingir a meta', fmtP(s.probMeta.p), 'meta líquida ' + fmtR(cfg.meta) + ' · ± ' + fmtP(1.96 * s.probMeta.ep) + ' (MC)'],
+    ['Lotes vendidos', fmtN(s.vendidos.media, 1) + ' de ' + at.k, fmtP(s.taxaVenda.media) + ' em média · P(todos vendidos) ' + fmtP(s.probTodos)],
+    ['Preço médio dos lotes vendidos', fmtR(s.precoMedio.media), 'média por evento · receita por lote ofertado ' + fmtR(s.recLoteOf.media)],
+    ['Participantes · ativos · vencedores', at.N + ' · ' + fmtN(s.ativos.media, 1) + ' · ' + fmtN(s.vencedores.media, 1), 'presentes · dão lances · compram ao menos 1 lote'],
+    ['Concentração da arrecadação', 'HHI ' + fmtN(s.hhi.media, 3), 'maior comprador paga ' + fmtP(s.topShare.media) + ' da receita (média)'],
+    ['Massa ofertada · vendida', fmtN(s.massaOf.media) + ' g · ' + fmtN(s.massaVend.media) + ' g', 'não vendida ' + fmtN(s.massaNaoVend.media) + ' g · residual (não ofertada) ' + fmtN(s.massaResid.media) + ' g'],
+    ['Receita por grama vendido', fmtR(s.recGrama.media, 2) + '/g', 'refere-se à amostra; não extrapolar para o preço comercial das sacas']
+  ];
+  $('#kpis').innerHTML = k.map(function (x) { return '<div class="kpi ' + (x[3] || '') + '"><div class="k-l">' + esc(x[0]) + '</div><div class="k-v">' + esc(x[1]) + '</div><div class="k-s">' + esc(x[2]) + '</div></div>'; }).join('');
+  var lin = [['liquida', 'Arrecadação líquida (R$)', 0], ['bruta', 'Receita bruta dos lotes (R$)', 0], ['inscricao', 'Receita de inscrição (R$)', 0], ['custos', 'Custos (R$)', 0], ['vendidos', 'Lotes vendidos', 2], ['taxaVenda', 'Proporção vendida', 3], ['precoMedio', 'Preço médio dos vendidos (R$)', 0], ['recLoteOf', 'Receita por lote ofertado (R$)', 0], ['recGrama', 'Receita por grama vendido (R$/g)', 2], ['ativos', 'Compradores ativos', 1], ['vencedores', 'Compradores vencedores', 1], ['hhi', 'HHI da receita', 3], ['topShare', 'Participação do maior comprador', 3], ['massaOf', 'Massa ofertada (g)', 0], ['massaVend', 'Massa vendida (g)', 0], ['massaNaoVend', 'Massa ofertada não vendida (g)', 0], ['massaResid', 'Massa residual não ofertada (g)', 0]];
+  state.resumoRows = lin.map(function (x) { var st = s[x[0]]; return { metrica: x[1], media: st.media, mediana: st.mediana, p10: st.p10, p90: st.p90, dp: st.dp, ep: st.ep, icInf: st.icInf, icSup: st.icSup, n: st.n, d: x[2] }; });
+  state.resumoRows.push({ metrica: 'Probabilidade de atingir a meta', media: s.probMeta.p, ep: s.probMeta.ep, n: L.n, d: 4 });
+  $('#tbl-stats').innerHTML = '<thead><tr><th class="l">Métrica</th><th>Média</th><th>Mediana</th><th>P10</th><th>P90</th><th>Desvio (eventos)</th><th>Erro MC</th><th>IC95 média inf.</th><th>IC95 média sup.</th><th>n</th></tr></thead><tbody>' +
+    state.resumoRows.map(function (x) { return '<tr><td class="l">' + esc(x.metrica) + '</td>' + ['media', 'mediana', 'p10', 'p90', 'dp', 'ep', 'icInf', 'icSup'].map(function (f) { return '<td>' + fmtN(x[f], x.d) + '</td>'; }).join('') + '<td>' + fmtN(x.n) + '</td></tr>'; }).join('') + '</tbody>';
+  desenharGraficos();
+}
+function desenharGraficos() {
+  var r = state.res; if (!r) return;
+  var cen = r.data.cenarios, at = cen[0], cfg = r.cfg, host = $('#charts'), cab = cabecalhoExport(r);
+  if (!host.children.length) {
+    var lg = legenda([{ cor: cssv('--series-1'), t: 'média (linha)', line: 1 }, { cor: cssv('--band'), t: 'P10–P90: variação entre eventos simulados', op: .7 }, { cor: cssv('--ci'), t: 'IC 95% da média (erro Monte Carlo)' }]);
+    cartaoGrafico(host, 'lotes', 'Arrecadação líquida × quantidade de lotes', '', lg);
+    cartaoGrafico(host, 'part', 'Arrecadação líquida × participantes', '', lg);
+    cartaoGrafico(host, 'gram', 'Arrecadação líquida × gramatura (experimento B: mesmo estoque)', '', lg);
+    cartaoGrafico(host, 'dist', 'Distribuição da arrecadação líquida simulada (cenário atual)', '', legenda([{ cor: cssv('--series-1'), t: 'repetições' }, { cor: cssv('--ci'), t: 'média e seu IC 95% (faixa estreita)', op: .6 }, { cor: cssv('--text-2'), t: 'mediana (tracejada)', line: 1 }, { cor: cssv('--series-3'), t: 'P10 e P90 (pontilhadas)', line: 1 }, { cor: cssv('--crit'), t: 'meta', line: 1 }]));
+    cartaoGrafico(host, 'calor', 'Mapa de calor: gramatura × participantes (experimento B)', '', '');
+    cartaoGrafico(host, 'conv', 'Convergência da média com o número de repetições', '', legenda([{ cor: cssv('--series-1'), t: 'média acumulada', line: 1 }, { cor: cssv('--ci'), t: 'IC 95% da média', op: .4 }]));
+  }
+  var vazio = 'Ajuste as faixas na aba Otimização (faixas e passos).';
+  $('#card-lotes .ch-note').innerHTML = (cfg.modo === 'A' ? 'Modo A: cada lote é uma amostra existente; <b>mais lotes = mais massa física ofertada</b>.' : 'Modo B: lotes de ' + cfg.massaLote + ' g; mais lotes usam mais do estoque fixo.') + ' Demais parâmetros como no cenário atual. Pontos acima do estoque ou da duração são omitidos.';
+  graficoLinha('lotes', { titulo: 'Arrecadação líquida × lotes', pts: ptsDe(cen, 'lotes'), xLabel: 'Lotes ofertados', yLabel: 'Arrecadação líquida (R$)', cur: at.k, hash: r.hash, cab: cab, vazio: vazio, tip: function (p) { return tipPt(p, function (p) { return p.x + ' lotes'; }); }, rows: cen.filter(function (c) { return c.grupo === 'lotes'; }), cols: COLS_VARR });
+  $('#card-part .ch-note').innerHTML = 'Participantes presentes (não compradores ativos nem vencedores). Valores acima da capacidade (' + cfg.capacidade + ') são omitidos. Sem custo por participante, mais público tende a só aumentar a concorrência.';
+  graficoLinha('part', { titulo: 'Arrecadação líquida × participantes', pts: ptsDe(cen, 'participantes'), xLabel: 'Participantes no evento', yLabel: 'Arrecadação líquida (R$)', cur: at.N, hash: r.hash, cab: cab, vazio: vazio, tip: function (p) { return tipPt(p, function (p) { return p.x + ' participantes'; }); }, rows: cen.filter(function (c) { return c.grupo === 'participantes'; }), cols: COLS_VARR });
+  $('#card-gram .ch-note').innerHTML = 'Fraciona o mesmo estoque físico (' + fmtN(r.data.massaTotal) + ' g) em lotes de massa igual, um café por lote. ' + (cfg.regraGram === 'todos' ? 'Oferta todos os lotes viáveis (até o limite de duração): o número de lotes muda com a gramatura.' : 'Mantém ' + cfg.k + ' lotes quando viável: a massa total ofertada muda.') + (cfg.modo === 'A' ? ' <b>Atenção: o cenário atual está no modo A; este gráfico é o experimento B.</b>' : '');
+  graficoLinha('gram', { titulo: 'Arrecadação líquida × gramatura', pts: ptsDe(cen, 'gramatura'), xLabel: 'Massa por lote (g)', yLabel: 'Arrecadação líquida (R$)', cur: cfg.modo === 'B' ? cfg.massaLote : null, hash: r.hash, cab: cab, vazio: vazio, tip: function (p) { return tipPt(p, function (p) { return p.x + ' g por lote'; }); }, rows: cen.filter(function (c) { return c.grupo === 'gramatura'; }), cols: COLS_VARR });
+  var L = at.stats.liquida;
+  $('#card-dist .ch-note').innerHTML = fmtN(at.liq.length) + ' eventos simulados. A largura do histograma é a <b>incerteza de um evento</b>; a faixa laranja estreita é o <b>IC 95% da média</b>, que diminui com mais repetições.';
+  graficoHist('dist', { titulo: 'Distribuição da arrecadação líquida', values: at.liq, xLabel: 'Arrecadação líquida por evento (R$)', icInf: L.icInf, icSup: L.icSup, hash: r.hash, cab: cab,
+    marks: [{ x: L.media, t: 'média', cor: cssv('--ci'), w: 2 }, { x: L.mediana, t: 'mediana', cor: cssv('--text-2'), dash: '5 3' }, { x: L.p10, t: 'P10', cor: cssv('--series-3'), dash: '2 3' }, { x: L.p90, t: 'P90', cor: cssv('--series-3'), dash: '2 3' }, { x: cfg.meta, t: 'meta', cor: cssv('--crit'), dash: '6 3' }] });
+  var hc = cen.filter(function (c) { return c.grupo === 'calor'; }), xs = [], ys = [];
+  hc.forEach(function (c) { if (xs.indexOf(c.x) < 0) xs.push(c.x); if (ys.indexOf(c.y) < 0) ys.push(c.y); });
+  xs.sort(function (a, b) { return a - b; }); ys.sort(function (a, b) { return a - b; });
+  var nx = xs.reduce(function (b, x) { return Math.abs(x - (cfg.modo === 'B' ? cfg.massaLote : 200)) < Math.abs(b - (cfg.modo === 'B' ? cfg.massaLote : 200)) ? x : b; }, xs[0]);
+  var ny = ys.reduce(function (b, y) { return Math.abs(y - at.N) < Math.abs(b - at.N) ? y : b; }, ys[0]);
+  var z = ys.map(function (y) { return xs.map(function (x) { var c = hc.filter(function (q) { return q.x === x && q.y === y; })[0]; if (!c) return null; if (!c.stats) return { v: NaN, motivos: c.motivos }; var Lq = c.stats.liquida; return { v: Lq.media, p10: Lq.p10, p90: Lq.p90, lo: Lq.icInf, k: c.k, atual: x === nx && y === ny }; }); });
+  $('#card-calor .ch-note').innerHTML = 'Arrecadação líquida média ao fracionar o mesmo estoque com cada massa por lote (' + (cfg.regraGram === 'todos' ? 'todos os lotes viáveis' : 'quantidade configurada, se viável') + '), para cada número de participantes. Células inviáveis (capacidade, gramatura permitida) aparecem em cinza.';
+  graficoCalor('calor', { titulo: 'Mapa de calor gramatura × participantes', xs: xs, ys: ys, z: z, xLabel: 'Massa por lote (g)', yLabel: 'Participantes', hash: r.hash, cab: cab, rows: hc, cols: COLS_VARR });
+  $('#card-conv .ch-note').innerHTML = 'Média acumulada da arrecadação líquida do cenário atual. A estabilização indica precisão numérica, <b>não</b> validade das hipóteses econômicas. Erro MC ∝ 1/√repetições.';
+  graficoConv('conv', { titulo: 'Convergência da média', values: at.liq, hash: r.hash, cab: cab });
+}
+
+/* ============================================================ sensibilidade */
+function renderSens() {
+  var r = state.res, out = $('#sens-out');
+  if (!r || r.tipo !== 'completa') { if (!r || !$('#card-sens')) out.innerHTML = 'Execute a análise completa para calcular a sensibilidade.'; return; }
+  var sc = r.data.cenarios.filter(function (c) { return c.grupo === 'sens'; }), por = {};
+  sc.forEach(function (c) { (por[c.chave] = por[c.chave] || { label: c.rotulo, chave: c.chave })[c.lado] = c; });
+  var rows = Object.keys(por).map(function (k) {
+    var p = por[k], lo = p.baixo && p.baixo.dif, hi = p.alto && p.alto.dif;
+    return { label: p.label, chave: k, vLo: fmtN(p.baixo.valor, 2), vHi: fmtN(p.alto.valor, 2), lo: lo ? lo.media : NaN, loI: lo ? lo.icInf : NaN, loS: lo ? lo.icSup : NaN, hi: hi ? hi.media : NaN, hiI: hi ? hi.icInf : NaN, hiS: hi ? hi.icSup : NaN,
+      mLo: p.baixo.stats ? p.baixo.stats.liquida.media : NaN, mHi: p.alto.stats ? p.alto.stats.liquida.media : NaN, ativLo: (p.baixo.ativas || []).join('; '), ativHi: (p.alto.ativas || []).join('; ') };
+  });
+  rows.sort(function (a, b) { return Math.max(Math.abs(b.lo), Math.abs(b.hi)) - Math.max(Math.abs(a.lo), Math.abs(a.hi)); });
+  out.innerHTML = '';
+  cartaoGrafico(out, 'sens', 'Tornado de sensibilidade', 'Base: ' + fmtR(r.data.cenarios[0].stats.liquida.media) + ' (cenário atual, ' + fmtN(r.reps) + ' repetições). Laranja = valor baixo; azul = valor alto; linhas finas = IC 95% da diferença pareada.', legenda([{ cor: cssv('--series-2'), t: 'valor baixo' }, { cor: cssv('--series-1'), t: 'valor alto' }]));
+  $('#card-sens').classList.remove('card'); // já está dentro de um cartão
+  graficoTornado('sens', { titulo: 'Sensibilidade da arrecadação líquida', rows: rows, tab: rows, hash: r.hash, cab: cabecalhoExport(r),
+    cols: [{ key: 'label', label: 'Hipótese', l: 1 }, { key: 'vLo', label: 'Valor baixo', l: 1 }, { key: 'mLo', label: 'Líquida média (baixo)', d: 0 }, { key: 'lo', label: 'Δ baixo', d: 0 }, { key: 'loI', label: 'Δ baixo IC inf', d: 0 }, { key: 'loS', label: 'Δ baixo IC sup', d: 0 }, { key: 'vHi', label: 'Valor alto', l: 1 }, { key: 'mHi', label: 'Líquida média (alto)', d: 0 }, { key: 'hi', label: 'Δ alto', d: 0 }, { key: 'hiI', label: 'Δ alto IC inf', d: 0 }, { key: 'hiS', label: 'Δ alto IC sup', d: 0 }, { key: 'ativHi', label: 'Restrições ativas (alto)', l: 1 }] });
+}
+
+/* ============================================================ otimização */
+function rodarOtim() {
+  if (errosAtuais().length) return;
+  var cfg = clone(state.cfg);
+  $('#btn-opt-cancel').disabled = false; $('#btn-opt').disabled = true;
+  iniciarJob('opt', 'otim', cfg, {
+    progress: function (p) { $('#opt-prog').textContent = p.fase + ': ' + fmtN(p.feito) + '/' + fmtN(p.total) + ' repetições'; },
+    done: function (res, job) { state.opt = { hash: job.hash, cfg: job.cfg, data: res, ms: Date.now() - job.t0 }; $('#opt-prog').textContent = 'Concluída em ' + fmtN((Date.now() - job.t0) / 1000, 1) + ' s.'; $('#btn-opt-cancel').disabled = true; $('#btn-opt').disabled = false; renderOtim(); marcarStale(); },
+    error: function (e) { $('#opt-prog').textContent = 'Erro: ' + e; $('#btn-opt-cancel').disabled = true; $('#btn-opt').disabled = false; }
+  });
+  $('#opt-prog').textContent = 'Iniciando…';
+}
+function fmtObj(obj, v) { return obj === 'meta' ? fmtP(v) : fmtR(v); }
+var OBJ_TXT = { liquida: 'arrecadação líquida esperada', bruta: 'receita bruta esperada dos lotes', p10: 'P10 da arrecadação líquida', meta: 'probabilidade de atingir a meta' };
+function renderOtim() {
+  var o = state.opt; if (!o) return; var d = o.data, c = o.cfg, out = $('#opt-out');
+  $('#btn-exp-opt').disabled = false;
+  if (!d.validados.length) { out.innerHTML = '<div class="card note crit">Nenhuma combinação viável na grade (' + d.nCombos + ' testadas). Verifique capacidade, duração, estoque e gramatura.</div>'; return; }
+  var b = d.validados[0], av = d.atualValid, h = '<div class="card">';
+  h += '<h2>Melhor combinação entre as opções avaliadas, sob estas hipóteses</h2>';
+  h += '<p class="muted">Objetivo: maximizar a ' + OBJ_TXT[d.objetivo] + '. Busca: ' + d.nViaveis + ' combinações viáveis de ' + d.nCombos + ' (' + fmtN(d.repOtim) + ' repetições cada, semente ' + d.seedBusca + '). Validação: ' + d.validados.length + ' melhores + cenário atual com semente independente ' + d.seedValid + ' e ' + fmtN(d.repValid) + ' repetições. Configuração <b class="mono">' + o.hash + '</b>.</p>';
+  h += '<div class="kpis"><div class="kpi hero"><div class="k-l">Combinação escolhida (validação)</div><div class="k-v">' + b.N + ' participantes · ' + b.k + ' lotes' + (b.g != null ? ' · ' + b.g + ' g' : '') + '</div><div class="k-s">' + (c.modo === 'A' ? 'modo A: amostras existentes' : 'modo B: fracionamento do mesmo estoque') + '</div></div>' +
+    '<div class="kpi"><div class="k-l">Objetivo validado</div><div class="k-v">' + fmtObj(d.objetivo, b.obj) + '</div><div class="k-s">na busca: ' + fmtObj(d.objetivo, b.objBusca) + ' (diferença indica ruído/viés de seleção)</div></div>' +
+    '<div class="kpi"><div class="k-l">Ganho vs. cenário atual (' + av.N + ' part. · ' + av.k + ' lotes' + (av.g != null ? ' · ' + av.g + ' g' : '') + ')</div><div class="k-v">' + (d.objetivo === 'meta' ? fmtN(100 * b.difObj, 1) + ' p.p.' : fmtR(b.difObj)) + '</div><div class="k-s">IC 95% (bootstrap pareado): ' + (d.objetivo === 'meta' ? fmtN(100 * b.difObjIC[0], 1) + ' a ' + fmtN(100 * b.difObjIC[1], 1) + ' p.p.' : fmtR(b.difObjIC[0]) + ' a ' + fmtR(b.difObjIC[1])) + ' · atual: ' + fmtObj(d.objetivo, av.obj) + '</div></div>' +
+    '<div class="kpi"><div class="k-l">Participantes · ativos · vencedores</div><div class="k-v">' + b.N + ' · ' + fmtN(b.stats.ativos.media, 1) + ' · ' + fmtN(b.stats.vencedores.media, 1) + '</div><div class="k-s">presença não é garantida pelo organizador</div></div></div>';
+  d.fronteiras.forEach(function (f) { h += '<div class="note warn"><b>Solução na fronteira:</b> ' + esc(f) + '</div>'; });
+  if (!d.fronteiras.length) h += '<div class="note good">A melhor combinação está no interior da grade testada em todas as dimensões variáveis (o que ainda não garante um ótimo universal).</div>';
+  if (d.restricoes.length) h += '<div class="note"><b>Restrições que determinaram a solução:</b><ul>' + d.restricoes.map(function (x) { return '<li>' + esc(x) + '</li>'; }).join('') + '</ul></div>';
+  else h += '<div class="note">Nenhuma restrição (capacidade, duração, estoque, gramatura) está ativa na solução.</div>';
+  var massas = d.ranking.map(function (r) { return r.stats.massaOf.media; });
+  h += '<div class="note">' + (c.modo === 'A' ? 'Modo A: as combinações ofertam quantidades físicas diferentes (massa ofertada média de ' + fmtN(Math.min.apply(null, massas)) + ' a ' + fmtN(Math.max.apply(null, massas)) + ' g). Mais lotes = mais café vendido, não apenas outra forma de dividir o mesmo café.' : 'Modo B: todas as combinações dividem o mesmo estoque físico; a massa ofertada varia apenas pelo número de lotes e pela sobra que não completa um lote.') + '</div>';
+  h += '<h3>Cinco melhores alternativas (validação independente)</h3><div class="tblwrap"><table><thead><tr><th>#</th><th>Participantes</th><th>Lotes</th><th>Massa/lote</th><th>Objetivo (busca)</th><th>Objetivo (validação)</th><th>Δ objetivo vs. atual [IC 95%]</th><th>Δ líquida média [IC 95%]</th><th>P(supera atual)</th><th>Líquida média</th><th>P10</th><th>P(meta)</th><th>Vendidos</th><th>Massa ofertada (g)</th></tr></thead><tbody>' +
+    d.validados.slice(0, 5).map(function (v, i) {
+      var dO = d.objetivo === 'meta' ? fmtN(100 * v.difObj, 1) + ' p.p. [' + fmtN(100 * v.difObjIC[0], 1) + '; ' + fmtN(100 * v.difObjIC[1], 1) + ']' : fmtR(v.difObj) + ' [' + fmtR(v.difObjIC[0]) + '; ' + fmtR(v.difObjIC[1]) + ']';
+      return '<tr class="' + (i === 0 ? 'hl' : '') + '"><td>' + (i + 1) + '</td><td>' + v.N + '</td><td>' + v.k + '</td><td>' + (v.g != null ? v.g + ' g' : 'amostra') + '</td><td>' + fmtObj(d.objetivo, v.objBusca) + '</td><td>' + fmtObj(d.objetivo, v.obj) + '</td><td>' + dO + '</td><td>' + fmtR(v.difLiq.media) + ' [' + fmtRk(v.difLiq.icInf) + '; ' + fmtRk(v.difLiq.icSup) + ']</td><td>' + fmtP(v.probSuperar) + '</td><td>' + fmtR(v.stats.liquida.media) + '</td><td>' + fmtR(v.stats.liquida.p10) + '</td><td>' + fmtP(v.stats.probMeta.p) + '</td><td>' + fmtN(v.stats.vendidos.media, 1) + '</td><td>' + fmtN(v.stats.massaOf.media) + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  var dif12 = d.validados.length > 1 ? Math.abs(d.validados[0].obj - d.validados[1].obj) : null;
+  if (dif12 != null) { var ep = d.objetivo === 'meta' ? Math.sqrt(2 * 0.25 / d.repValid) : d.validados[0].stats.liquida.ep * Math.SQRT2; if (dif12 < 2 * ep) h += '<div class="note warn">As duas melhores alternativas diferem menos que cerca de 2 erros padrão Monte Carlo: na prática, estão empatadas sob este modelo.</div>'; }
+  h += '<details class="adv"><summary>Ranking completo da busca (' + d.ranking.length + ' combinações viáveis)</summary><div class="tblwrap tall"><table><thead><tr><th>#</th><th>Participantes</th><th>Lotes</th><th>Massa/lote</th><th>Objetivo</th><th>Líquida média</th><th>Erro MC</th><th>P10</th><th>P(meta)</th></tr></thead><tbody>' +
+    d.ranking.map(function (v, i) { return '<tr><td>' + (i + 1) + '</td><td>' + v.N + '</td><td>' + v.k + '</td><td>' + (v.g != null ? v.g : '—') + '</td><td>' + fmtObj(d.objetivo, v.obj) + '</td><td>' + fmtR(v.stats.liquida.media) + '</td><td>' + fmtR(v.stats.liquida.ep) + '</td><td>' + fmtR(v.stats.liquida.p10) + '</td><td>' + fmtP(v.stats.probMeta.p) + '</td></tr>'; }).join('') + '</tbody></table></div></details>';
+  if (d.inviaveis.length) h += '<details class="adv"><summary>Combinações inviáveis excluídas (' + d.inviaveis.length + ')</summary><div class="tblwrap tall"><table><thead><tr><th>Participantes</th><th>Lotes</th><th>Massa/lote</th><th class="l">Motivo</th></tr></thead><tbody>' + d.inviaveis.map(function (v) { return '<tr><td>' + v.N + '</td><td>' + v.k + '</td><td>' + (v.g != null ? v.g : '—') + '</td><td class="l">' + esc(v.motivos.join('; ')) + '</td></tr>'; }).join('') + '</tbody></table></div></details>';
+  h += '</div>';
+  out.innerHTML = h;
+}
+function exportarOtim() {
+  var o = state.opt; if (!o) return; var d = o.data;
+  var cab = ['Otimização em grade — dados SINTÉTICOS', 'Configuração ' + o.hash + ' · objetivo ' + d.objetivo + ' · semente busca ' + d.seedBusca + ' · semente validação ' + d.seedValid + ' · ' + d.repOtim + '/' + d.repValid + ' repetições'].concat(d.fronteiras).concat(d.restricoes);
+  var rows = d.validados.map(function (v, i) { return Object.assign({ etapa: 'validacao', pos: i + 1 }, v); }).concat(d.ranking.map(function (v, i) { return Object.assign({ etapa: 'busca', pos: i + 1 }, v); })).concat(d.inviaveis.map(function (v) { return Object.assign({ etapa: 'inviavel' }, v); }));
+  var cols = [{ key: 'etapa', label: 'etapa' }, { key: 'pos', label: 'posicao' }, { key: 'N', label: 'participantes' }, { key: 'k', label: 'lotes' }, { key: 'g', label: 'massa_lote_g' }, { key: 'obj', label: 'objetivo' }, { key: 'objBusca', label: 'objetivo_na_busca' },
+    { key: 'difObj', label: 'dif_objetivo_vs_atual' }, { get: function (r) { return r.difObjIC && r.difObjIC[0]; }, label: 'dif_obj_ic95_inf' }, { get: function (r) { return r.difObjIC && r.difObjIC[1]; }, label: 'dif_obj_ic95_sup' },
+    { get: function (r) { return r.difLiq && r.difLiq.media; }, label: 'dif_liquida_media' }, { get: function (r) { return r.difLiq && r.difLiq.icInf; }, label: 'dif_liquida_ic95_inf' }, { get: function (r) { return r.difLiq && r.difLiq.icSup; }, label: 'dif_liquida_ic95_sup' }, { key: 'probSuperar', label: 'prob_superar_atual' },
+    { get: function (r) { return r.stats && r.stats.liquida.media; }, label: 'liquida_media' }, { get: function (r) { return r.stats && r.stats.liquida.ep; }, label: 'erro_mc' }, { get: function (r) { return r.stats && r.stats.liquida.p10; }, label: 'liquida_p10' }, { get: function (r) { return r.stats && r.stats.liquida.p90; }, label: 'liquida_p90' },
+    { get: function (r) { return r.stats && r.stats.bruta.media; }, label: 'bruta_media' }, { get: function (r) { return r.stats && r.stats.probMeta.p; }, label: 'prob_meta' }, { get: function (r) { return r.stats && r.stats.vendidos.media; }, label: 'vendidos_media' }, { get: function (r) { return r.stats && r.stats.massaOf.media; }, label: 'massa_ofertada_g' },
+    { get: function (r) { return r.motivos ? r.motivos.join(' | ') : ''; }, label: 'motivos_inviabilidade' }];
+  baixar('otimizacao_' + o.hash + '.csv', toCSV(rows, cols, cab), 'text/csv;charset=utf-8');
+}
+
+/* ============================================================ auditoria */
+function rodarAuditoria() {
+  if (errosAtuais().length) return alert('Corrija a configuração antes de auditar.');
+  var rep = Math.max(0, Math.round(+$('#aud-rep').value || 0)), cfg = clone(state.cfg), a = E.auditar(cfg, rep);
+  state.aud = { hash: E.hashCfg(cfg), cfg: cfg, rep: rep, a: a };
+  renderAuditoria(); marcarStale();
+}
+function renderAuditoria() {
+  var A = state.aud; if (!A) return; var a = A.a, c = A.cfg, rc = a.reconc, out = $('#aud-out');
+  $('#btn-exp-aud').disabled = false; $('#btn-exp-aud-l').disabled = false;
+  var ok = !a.erros.length;
+  var h = '<div class="note ' + (ok ? 'good' : 'crit') + '"><b>' + (ok ? 'Reconciliação aprovada' : 'Falha de reconciliação') + '</b> — repetição ' + A.rep + ', configuração <b class="mono">' + A.hash + '</b>, semente ' + c.semente + '. ' + (ok ? 'Receita = soma dos pagamentos; nenhum saldo negativo; nenhum comprador acima do limite de compras; nenhum preço abaixo da reserva ou acima do limite do vencedor; massa ofertada ≤ estoque.' : a.erros.map(esc).join('; ')) + '</div>';
+  h += '<div class="tblwrap"><table><thead><tr><th class="l">Reconciliação</th><th>Valor</th><th class="l">Verificação</th></tr></thead><tbody>' +
+    [['Receita dos lotes', fmtR(rc.receita_lotes, 2), ''], ['Soma dos pagamentos dos compradores', fmtR(rc.soma_pagamentos, 2), Math.abs(rc.receita_lotes - rc.soma_pagamentos) < 1e-6 ? '✓ igual à receita' : '✗'],
+      ['Receita de inscrição', fmtR(a.metricas.inscricao, 2), a.R.N + ' × ' + fmtR(c.taxa)], ['Custos', fmtR(a.metricas.custos, 2), ''], ['Arrecadação líquida', fmtR(a.metricas.liquida, 2), 'receita + inscrição − custos'],
+      ['Lotes ofertados / vendidos', rc.lotes_ofertados + ' / ' + rc.lotes_vendidos, ''], ['Massa em estoque (g)', fmtN(rc.massa_estoque, 1), ''], ['Massa ofertada (g)', fmtN(rc.massa_ofertada, 1), rc.massa_ofertada <= rc.massa_estoque + 1e-6 ? '✓ ≤ estoque' : '✗'],
+      ['Massa vendida (g)', fmtN(rc.massa_vendida, 1), ''], ['Massa ofertada não vendida (g)', fmtN(rc.massa_nao_vendida, 1), ''], ['Massa residual não ofertada (g)', fmtN(rc.massa_residual, 1), 'vendida + não vendida + residual = estoque ' + (Math.abs(rc.massa_vendida + rc.massa_nao_vendida + rc.massa_residual - rc.massa_estoque) < 1e-6 ? '✓' : '✗')]
+    ].map(function (r) { return '<tr><td class="l">' + r[0] + '</td><td>' + r[1] + '</td><td class="l">' + r[2] + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  if (a.R.ativas.length) h += '<div class="note warn">Restrições ativas: ' + a.R.ativas.map(esc).join('; ') + '</div>';
+  h += '<h3 style="margin-top:12px">Lotes, na ordem de venda</h3><div class="tblwrap tall"><table><thead><tr><th>Lote</th><th class="l">ID</th><th class="l">Café</th><th>Nota</th><th>Massa (g)</th><th>Reserva</th><th>Elegíveis</th><th>Vencedor</th><th>Maior limite</th><th>2º limite</th><th>Preço pago</th><th>Saldo antes</th><th>Saldo depois</th><th class="l">Regra aplicada</th></tr></thead><tbody>' +
+    a.lotes.map(function (l) { return '<tr class="' + (l.vendido ? '' : 'hl') + '"><td>' + l.lote + '</td><td class="l">' + esc(l.id_lote) + '</td><td class="l">' + esc(l.cafe_id) + '</td><td>' + fmtN(l.nota, 2) + '</td><td>' + fmtN(l.massa_g, 1) + '</td><td>' + fmtR(l.reserva) + '</td><td>' + l.elegiveis + '</td><td>' + (l.vencedor || '—') + '</td><td>' + fmtR(l.maior_limite) + '</td><td>' + fmtR(l.segundo_limite) + '</td><td><b>' + (l.vendido ? fmtR(l.preco, 2) : 'não vendido') + '</b></td><td>' + fmtR(l.saldo_antes) + '</td><td>' + fmtR(l.saldo_depois) + '</td><td class="l">' + esc(l.regra) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  var nv = a.lotes.filter(function (l) { return !l.vendido; });
+  h += '<p>Lotes não vendidos: ' + (nv.length ? nv.map(function (l) { return esc(l.id_lote); }).join(', ') : 'nenhum') + '. Itens do inventário não ofertados: ' + (a.naoOfertados.length ? a.naoOfertados.length + ' (' + a.naoOfertados.slice(0, 30).map(esc).join(', ') + (a.naoOfertados.length > 30 ? '…' : '') + ')' : 'nenhum') + '.</p>';
+  h += '<h3>Limites de lance do lote selecionado</h3><div id="aud-lances"></div>';
+  h += '<h3>Participantes</h3><div class="toolbar"><button class="btn small" id="btn-exp-aud-c">Participantes (CSV)</button></div><div class="tblwrap tall"><table><thead><tr><th>Participante</th><th class="l">Ativo</th><th>Orçamento</th><th>Saldo inicial</th><th>Avaliação de referência Aᵢ×DAP</th><th>Compras</th><th>Gasto</th><th>Saldo final</th></tr></thead><tbody>' +
+    a.compradores.map(function (p) { return '<tr class="' + (p.compras ? 'win' : '') + '"><td>' + p.comprador + '</td><td class="l">' + (p.ativo ? 'sim' : 'não') + '</td><td>' + fmtR(p.orcamento) + '</td><td>' + fmtR(p.saldo_inicial) + '</td><td>' + fmtR(p.aval_ref) + '</td><td>' + p.compras + '</td><td>' + fmtR(p.gasto, 2) + '</td><td>' + fmtR(p.saldo_final, 2) + '</td></tr>'; }).join('') + '</tbody></table></div>';
+  out.innerHTML = h;
+  $('#btn-exp-aud-c').addEventListener('click', function () { baixar('auditoria_participantes_' + A.hash + '_rep' + A.rep + '.csv', toCSV(a.compradores, ['comprador', 'ativo', 'orcamento', 'saldo_inicial', 'aval_ref', 'prioridade_desempate', 'compras', 'gasto', 'saldo_final'].map(function (k) { return { key: k, label: k }; }), cabAud()), 'text/csv;charset=utf-8'); });
+  var sel = $('#aud-lote'); sel.innerHTML = a.lotes.map(function (l) { return '<option value="' + l.lote + '">Lote ' + l.lote + ' — ' + esc(l.id_lote) + '</option>'; }).join('');
+  renderLances();
+}
+function renderLances() {
+  var A = state.aud; if (!A || !A.a.lotes.length) { if ($('#aud-lances')) $('#aud-lances').innerHTML = '<p class="muted">Nenhum lote ofertado.</p>'; return; }
+  var j = +$('#aud-lote').value || 1, a = A.a, lt = a.lotes[j - 1];
+  var ls = a.lances.filter(function (l) { return l.lote === j; }).sort(function (x, y) { return (y.limite == null ? -1 : y.limite) - (x.limite == null ? -1 : x.limite); });
+  $('#aud-lances').innerHTML = '<p class="muted">Lote ' + j + ' (' + esc(lt.id_lote) + ', ' + esc(lt.cafe_id) + ', ' + fmtN(lt.massa_g, 1) + ' g, nota ' + fmtN(lt.nota, 2) + '): limite = mín(avaliação, saldo) se compras &lt; máximo; elegível se limite ≥ reserva (' + fmtR(lt.reserva) + '). ' + esc(lt.regra) + '.</p><div class="tblwrap tall"><table><thead><tr><th>Participante</th><th>Avaliação Vᵢⱼ</th><th>Saldo antes</th><th>Limite de lance</th><th>Compras antes</th><th>Do mesmo café</th><th class="l">Situação</th><th class="l">Vencedor</th></tr></thead><tbody>' +
+    ls.map(function (l) { return '<tr class="' + (l.vencedor ? 'win' : '') + '"><td>' + l.comprador + '</td><td>' + fmtR(l.avaliacao, 2) + '</td><td>' + fmtR(l.saldo_antes, 2) + '</td><td>' + fmtR(l.limite, 2) + '</td><td>' + l.compras_antes + '</td><td>' + l.compras_mesmo_cafe + '</td><td class="l">' + esc(l.situacao) + '</td><td class="l">' + (l.vencedor ? 'vencedor — paga ' + fmtR(lt.preco, 2) : '') + '</td></tr>'; }).join('') + '</tbody></table></div>';
+}
+function cabAud() { var A = state.aud; return ['Auditoria de uma repetição — dados SINTÉTICOS', 'Configuração ' + A.hash + ' · semente ' + A.cfg.semente + ' · repetição ' + A.rep + ' · mecanismo ' + A.cfg.mecanismo]; }
+
+/* ============================================================ configuração: salvar / carregar */
+function salvarConfig() {
+  var o = { aplicacao: 'simulador_leilao_cafes', versao: E.VERSION, salvo_em: new Date().toISOString(), hash_configuracao: state.hash,
+    aviso: 'Preços, orçamentos e avaliações são hipóteses sintéticas, não cotações.', parametros: state.cfg };
+  baixar('configuracao_' + state.hash + '.json', JSON.stringify(o, null, 2), 'application/json');
+}
+function carregarConfigTexto(txt) {
+  var obj, avisos = [], erros = [];
+  try { obj = JSON.parse(txt); } catch (e) { return { erros: ['Arquivo não é um JSON válido: ' + e.message] }; }
+  var p = obj && obj.parametros ? obj.parametros : obj;
+  if (!p || typeof p !== 'object' || Array.isArray(p)) return { erros: ['Estrutura inesperada: esperado um objeto com “parametros”.'] };
+  var novo = clone(DEF);
+  Object.keys(p).forEach(function (k) {
+    if (k === 'versao') return;
+    if (k === 'inventario') { novo.inventario = p.inventario; return; }
+    if (!(k in DEF)) { avisos.push('Parâmetro desconhecido ignorado: ' + k); return; }
+    novo[k] = p[k];
+  });
+  Object.keys(DEF).forEach(function (k) { if (!(k in p) && k !== 'versao') avisos.push('Ausente no arquivo, usado o valor inicial: ' + (SCH[k] ? SCH[k].l : k)); });
+  erros = validarCfg(novo);
+  if (!Array.isArray(novo.inventario)) erros.push('Inventário ausente ou inválido.');
+  else {
+    novo.inventario = novo.inventario.map(function (s) { return { amostra_id: s.amostra_id, cafe_id: s.cafe_id, colocacao: +s.colocacao, nota: +s.nota, massa_g: +s.massa_g, ordem_manual: s.ordem_manual == null || s.ordem_manual === '' ? null : +s.ordem_manual, origem_nota: s.origem_nota || 'importado', origem_massa: s.origem_massa || 'importado' }; });
+    erros = erros.concat(validarInventario(novo.inventario));
+  }
+  return { erros: erros, avisos: avisos, cfg: novo, hashArquivo: obj.hash_configuracao };
+}
+function exportarParametros() {
+  var r = state.res; if (!r) return alert('Nenhum resultado calculado.');
+  var o = { aplicacao: 'simulador_leilao_cafes', versao: E.VERSION, exportado_em: new Date().toISOString(), hash_configuracao: r.hash, semente: r.cfg.semente,
+    tipo_execucao: r.tipo, repeticoes: r.reps, configuracao_atual_igual: r.hash === state.hash, gerador: 'hash contador (murmur3 fmix32) + inversa normal de Acklam; números aleatórios comuns por (semente, repetição, fluxo, participante, item)',
+    aviso: 'Preços, orçamentos e avaliações são hipóteses sintéticas, não cotações.', parametros: r.cfg };
+  baixar('parametros_' + r.hash + '.json', JSON.stringify(o, null, 2), 'application/json');
+}
+function exportarResumo() {
+  var r = state.res; if (!r) return; var at = r.data.cenarios[0];
+  var cab = cabecalhoExport(r).concat(['Cenário: modo ' + r.cfg.modo + ', ' + at.N + ' participantes, ' + at.k + ' lotes' + (r.cfg.modo === 'B' ? ', ' + r.cfg.massaLote + ' g' : '')]);
+  baixar('resumo_' + r.hash + '.csv', toCSV(state.resumoRows, [{ key: 'metrica', label: 'metrica' }, { key: 'media', label: 'media' }, { key: 'mediana', label: 'mediana' }, { key: 'p10', label: 'p10' }, { key: 'p90', label: 'p90' }, { key: 'dp', label: 'desvio_eventos' }, { key: 'ep', label: 'erro_mc' }, { key: 'icInf', label: 'ic95_media_inf' }, { key: 'icSup', label: 'ic95_media_sup' }, { key: 'n', label: 'n' }], cab), 'text/csv;charset=utf-8');
+}
+function exportarVarreduras() {
+  var r = state.res; if (!r) return;
+  baixar('varreduras_' + r.hash + '.csv', toCSV(r.data.cenarios.filter(function (c) { return c.grupo !== 'atual'; }), COLS_VARR.concat([{ key: 'rotulo', label: 'sensibilidade_rotulo', l: 1 }, { key: 'lado', label: 'sensibilidade_lado', l: 1 }, { get: function (c) { return c.dif && c.dif.media; }, label: 'dif_vs_atual' }, { get: function (c) { return c.dif && c.dif.icInf; }, label: 'dif_ic95_inf' }, { get: function (c) { return c.dif && c.dif.icSup; }, label: 'dif_ic95_sup' }]), cabecalhoExport(r)), 'text/csv;charset=utf-8');
+}
+function exportarRepeticoes() {
+  var r = state.res; if (!r) return; var at = r.data.cenarios[0];
+  var rows = at.liq.map(function (v, i) { return { repeticao: i, liquida: v, bruta: at.bruta[i] }; });
+  baixar('repeticoes_' + r.hash + '.csv', toCSV(rows, [{ key: 'repeticao', label: 'repeticao' }, { key: 'liquida', label: 'arrecadacao_liquida' }, { key: 'bruta', label: 'receita_bruta_lotes' }], cabecalhoExport(r)), 'text/csv;charset=utf-8');
+}
+function exportarAuditoria(tipo) {
+  var A = state.aud; if (!A) return;
+  if (tipo === 'lotes') baixar('auditoria_lotes_' + A.hash + '_rep' + A.rep + '.csv', toCSV(A.a.lotes, ['lote', 'id_lote', 'cafe_id', 'nota', 'massa_g', 'reserva', 'elegiveis', 'vendido', 'vencedor', 'maior_limite', 'segundo_limite', 'preco', 'incrementos', 'regra', 'saldo_antes', 'saldo_depois', 'receita_acumulada'].map(function (k) { return { key: k, label: k }; }), cabAud().concat(['Reconciliação: receita ' + A.a.reconc.receita_lotes.toFixed(2) + ' = pagamentos ' + A.a.reconc.soma_pagamentos.toFixed(2) + '; erros: ' + (A.a.erros.length ? A.a.erros.join(' | ') : 'nenhum')])), 'text/csv;charset=utf-8');
+  else baixar('auditoria_limites_' + A.hash + '_rep' + A.rep + '.csv', toCSV(A.a.lances, ['lote', 'cafe_id', 'comprador', 'avaliacao', 'saldo_antes', 'limite', 'compras_antes', 'compras_mesmo_cafe', 'elegivel', 'situacao', 'vencedor'].map(function (k) { return { key: k, label: k }; }), cabAud()), 'text/csv;charset=utf-8');
+}
+
+/* ============================================================ metodologia */
+function renderMetodologia() {
+  $('#metodologia').innerHTML = [
+    '<h2>Metodologia científica</h2>',
+    '<p>Este simulador implementa um <b>modelo hipotético</b> e transparente. Ele responde: <i>“se as hipóteses abaixo valessem, quanto o leilão arrecadaria em diferentes configurações?”</i>. Não estima a demanda real. Aumentar o número de repetições melhora apenas a precisão numérica — <b>não valida os parâmetros econômicos</b>. Notas COE descrevem qualidade sensorial e não determinam preços automaticamente.</p>',
+    '<h3>1. Teoria dos leilões e valores privados</h3>',
+    '<p>Cada participante tem um valor privado para cada lote, conhecido apenas por ele e não afetado pelas informações dos outros (não há componente de valor comum incerto, logo não há “maldição do vencedor”). Em um leilão de <b>segundo preço</b> de um único bem (Vickrey, 1961), declarar o próprio valor é estratégia dominante. Essa propriedade <b>não</b> se transfere automaticamente para uma sequência de lotes com orçamentos e múltiplas compras (Benoît & Krishna, 2001): um comprador racional poderia poupar para lotes futuros ou distorcer lances. Aqui os compradores são <b>míopes</b> — dão como limite o menor entre a avaliação corrente e o saldo — e o modelo <b>não calcula equilíbrio de Nash</b> nem estratégias ótimas.</p>',
+    '<p><b>Mecanismo implementado (padrão): segundo preço com reserva.</b> São elegíveis os limites ≥ reserva. Sem elegíveis, o lote não é vendido; com um, ele paga a reserva; com dois ou mais, o maior limite vence e paga o 2º maior limite elegível. Empates são resolvidos por uma prioridade aleatória fixa por participante em cada repetição (o vencedor paga o próprio valor empatado).</p>',
+    '<p><b>Leilão inglês ascendente (opcional), no formato de relógio com degraus.</b> O preço começa na reserva r e sobe um incremento Δ por vez; cada participante permanece enquanto o degrau ≤ seu limite e sai quando não o aceita. Se o 2º maior limite L₂ permite m = ⌊(L₂ − r)/Δ⌋ incrementos, o vencedor paga r + (m+1)Δ se puder cobri-lo; se os dois maiores limites estão no mesmo degrau, vence o maior limite (prioridade em empate) ao preço r + mΔ. A diferença para o segundo preço é de até um incremento por lote. Um pregão verbal com lances alternados pode diferir do relógio em mais um incremento, conforme quem detém o lance; isso não é modelado. Com lances míopes ambos produzem quase o mesmo resultado neste modelo, mas <b>não são estrategicamente equivalentes</b> em leilões sequenciais com orçamento e informação revelada ao longo do pregão (lances revelam informação; há efeitos de ordem e o “declining price anomaly” documentado por Ashenfelter, 1989).</p>',
+    '<h3>2. Avaliação (hipótese de modelagem, não lei empírica)</h3>',
+    '<div class="formula">V<sub>ij</sub> = DAP<sub>ref</sub> · A<sub>i</sub> · P<sub>ij</sub> · exp[β(s<sub>j</sub> − s<sub>0</sub>)] · (g<sub>j</sub>/g<sub>0</sub>)<sup>η</sup> · (k<sub>0</sub>/k)<sup>α</sup> · d<sup>h<sub>i</sub></sup> · c<sup>q<sub>ij</sub></sup></div>',
+    '<ul><li>A<sub>i</sub> = exp(σ<sub>A</sub>·W<sub>i</sub>): interesse geral do participante (mediana 1); DAP<sub>ref</sub> é a avaliação mediana de um lote de referência (massa g₀, nota s₀, oferta k₀).</li>',
+    '<li>P<sub>ij</sub> = exp(σ<sub>c</sub>·T<sub>i,café(j)</sub> + σ<sub>l</sub>·E<sub>ij</sub>): preferência. O componente T é <b>compartilhado por todos os lotes do mesmo café</b> para o mesmo comprador, evitando tratar avaliações de amostras do mesmo café como independentes; E é específico do lote.</li>',
+    '<li>s<sub>j</sub>: nota; β: efeito hipotético de um ponto (β = 0,15 ⇒ +1 ponto ≈ ×1,16). g<sub>j</sub>: massa; η: elasticidade da avaliação em relação à massa. k: lotes ofertados; α: efeito hipotético de exclusividade, ∂log V/∂log k = −α.</li>',
+    '<li>h<sub>i</sub>: compras anteriores; q<sub>ij</sub>: compras anteriores do mesmo café; d, c ∈ (0,1]: reduções do interesse.</li></ul>',
+    '<div class="formula">L<sub>ij</sub> = min(V<sub>ij</sub>, S<sub>i</sub>) se h<sub>i</sub> &lt; M; caso contrário L<sub>ij</sub> = 0 &nbsp;&nbsp;·&nbsp;&nbsp; S<sub>i</sub> ← S<sub>i</sub> − p<sub>j</sub> após cada compra</div>',
+    '<p>S<sub>i</sub> é o saldo: começa no orçamento B<sub>i</sub> (menos a inscrição, se ela sair do mesmo orçamento). Assim, nenhum comprador paga acima do saldo nem do limite de compras M. <b>Orçamento</b> (teto de caixa), <b>avaliação</b> (quanto vale), <b>reserva</b> (mínimo aceito) e <b>preço pago</b> (resultado do mecanismo) são grandezas distintas.</p>',
+    '<h3>3. Distribuições: lognormal, média e mediana</h3>',
+    '<p>Orçamentos e avaliações são, por padrão, lognormais: X = m·exp(σZ), Z ~ Normal(0,1). São positivas e assimétricas à direita (Limpert, Stahel & Abbt, 2001). O parâmetro informado é a <b>mediana</b> m, não a média:</p>',
+    '<div class="formula">Mediana = m &nbsp;&nbsp; E[X] = m·exp(σ²/2) &nbsp;&nbsp; Var[X] = m²·exp(σ²)·(exp(σ²) − 1)</div>',
+    '<p>Ex.: mediana R$ 4.000 com σ = 0,5 ⇒ média ≈ R$ 4.533. Há também opções de orçamento uniforme ou constante.</p>',
+    '<h3>4. Monte Carlo, lei dos grandes números e precisão</h3>',
+    '<p>Cada repetição sorteia um evento completo. Pela lei dos grandes números a média das repetições converge para a esperança <b>do modelo</b>. Com m repetições:</p>',
+    '<div class="formula">R̄ = (1/m) Σ R<sub>r</sub> &nbsp;&nbsp; s² = Σ(R<sub>r</sub> − R̄)²/(m−1) &nbsp;&nbsp; EP<sub>MC</sub> = s/√m &nbsp;&nbsp; IC<sub>95%</sub> ≈ R̄ ± t<sub>m−1; 0,975</sub>·EP<sub>MC</sub></div>',
+    '<p>Quadruplicar as repetições reduz o erro Monte Carlo pela metade. <b>P10–P90</b> (faixa azul nos gráficos) descreve a variação entre eventos simulados — quanto um único evento pode variar. O <b>IC 95% da média</b> (barras laranja) descreve só a precisão numérica da média estimada. P(meta) tem erro ≈ √(p(1−p)/m).</p>',
+    '<h3>5. Números aleatórios comuns (CRN) e comparações pareadas</h3>',
+    '<p>Cada sorteio é obtido por um gerador baseado em contador: u = hash(semente, repetição, fluxo, participante, item). O participante nº 7 da repetição 120 tem o mesmo orçamento e as mesmas preferências em todos os cenários; a mesma amostra tem o mesmo ruído; a ordem aleatória é aninhada (os 5 primeiros lotes são subconjunto dos 10 primeiros). Isso reduz a variância das <b>diferenças</b> entre cenários (Law, 2015; Glasserman, 2003). Diferenças são avaliadas repetição a repetição: D<sub>r</sub> = R<sub>r</sub>(A) − R<sub>r</sub>(B), com IC calculado a partir do desvio de D. Na otimização, os melhores candidatos são revalidados com uma semente independente (evita o viés de selecionar o maior de muitos resultados ruidosos) e o IC da diferença de objetivo é obtido por bootstrap pareado (300 reamostragens).</p>',
+    '<h3>6. Gramatura: dois experimentos distintos</h3>',
+    '<p><b>A — Seleção de amostras existentes:</b> cada lote é uma amostra física; mais lotes significam mais massa vendida. <b>B — Fracionamento de estoque fixo:</b> o estoque de cada café é dividido em lotes de massa g; lotes viáveis por café = ⌊massa do café / g⌋; nunca há mistura de cafés e o número de lotes nunca excede o estoque. Massa ofertada, vendida, não vendida e residual são reportadas. Receita por grama refere-se à amostra e <b>não deve ser extrapolada</b> para o preço comercial das sacas.</p>',
+    '<h3>7. Sensibilidade e tipos de incerteza</h3>',
+    '<ul><li><b>Incerteza de evento</b>: variação natural entre eventos com os mesmos parâmetros (P10–P90).</li><li><b>Erro Monte Carlo</b>: imprecisão numérica da média (IC 95%); diminui com repetições.</li><li><b>Incerteza de parâmetros</b>: não sabemos os valores reais de orçamento, DAP, β, η, α etc. É, de longe, a maior fonte de incerteza. A análise de sensibilidade (um fator por vez, Saltelli et al., 2008) mostra quais hipóteses mais mudam o resultado; ela não é uma distribuição de probabilidade dos parâmetros. Para propagá-la, seria necessário Monte Carlo aninhado com distribuições justificadas por dados.</li></ul>',
+    '<h3>8. Limites estratégicos e mecanismos não modelados</h3>',
+    '<ul><li>Lances míopes; sem poupança estratégica, sinalização, conluio ou formação de “parcerias”.</li><li>Sem motivação filantrópica explícita (lances acima do valor privado por doação), efeito de animação do leiloeiro, fadiga ou saída antecipada do público.</li><li>Presença e fração ativa exógenas: o organizador controla capacidade e convites, não a presença; a taxa de inscrição não afasta participantes no modelo.</li><li>O comprador adquire apenas a amostra física. Se o lance der direito às sacas, o modelo precisa de quantidade em kg, preço por kg e regras de adjudicação.</li><li>Notas intermediárias, composição por café e massas do inventário inicial são <b>sintéticas</b>.</li></ul>',
+    '<h3>9. Alterações metodológicas em relação ao notebook <code>Simulacao_Leilao_Cafes_Transparente.ipynb</code></h3>',
+    '<p>Foram mantidos: orçamento e avaliação lognormais com medianas R$ 4.000 (σ 0,5) e R$ 1.200 (σ 0,4); fator de qualidade exp[β(s−86,5)](g/200)<sup>η</sup> com β = 0,15 e η = 0,5; exclusividade (k₀/k)<sup>α</sup> com k₀ = 5; d = 0,7; até 2 compras; reserva R$ 300; regra de segundo preço com reserva; inscrição opcional que reduz o orçamento; inventário ilustrativo de 10 cafés × 5 amostras com notas de 90 a 86,5 interpoladas e massas uniformes 150–250 g; reconciliações; P10/P90, erro MC e IC t.</p>',
+    '<ul><li><b>Preferência decomposta</b>: o notebook usava P<sub>ij</sub> independente por lote (σ = 0,25). Agora P<sub>ij</sub> = exp(σ<sub>c</sub>T<sub>i,café</sub> + σ<sub>l</sub>E<sub>ij</sub>), com σ<sub>c</sub> = 0,20 e σ<sub>l</sub> = 0,15 (desvio total ≈ 0,25), para que lotes do mesmo café compartilhem a preferência do comprador.</li>',
+    '<li><b>Redução por mesmo café</b> (c = 0,8): inexistente no notebook, que reconhecia essa omissão como possível viés a favor de ofertas maiores. Use c = 1 para reproduzir a regra anterior.</li>',
+    '<li><b>Fração ativa</b> (0,8): o notebook supunha que todos os presentes davam lances (equivale a 1,0).</li>',
+    '<li><b>Gerador aleatório</b>: PCG64 sequencial do NumPy foi substituído por gerador baseado em contador (hash) para garantir números aleatórios comuns também entre públicos e modos diferentes. A semente 42 não reproduz os números exatos do notebook.</li>',
+    '<li><b>Novos elementos</b>: modo B (fracionamento do estoque), seleções por nota/rodízio/manual, reserva por grama, leilão inglês com incremento, custos, capacidade e duração, objetivos de otimização com validação independente e sensibilidade.</li>',
+    '<li><b>IC t</b>: quantil t aproximado por expansão de Cornish–Fisher (diferença &lt; 0,1% para m ≥ 20) em vez de <code>scipy.stats.t</code>.</li></ul>',
+    '<h3>Como substituir hipóteses por dados</h3>',
+    '<p>Prioridades: (1) confirmar inventário — amostras por café, massas e notas reais; (2) confirmar se o lance transfere só a amostra; (3) estimar orçamento e disposição a pagar com pesquisa prévia ou lances históricos de eventos semelhantes (para lognormal: μ̂ = média(log x), σ̂ = desvio(log x)); (4) definir reserva, incremento, duração e custos reais; (5) tratar resultados absolutos em reais como ilustrativos até essa calibração.</p>',
+    '<h3>Referências</h3>',
+    '<ul>',
+    '<li>Vickrey, W. (1961). Counterspeculation, auctions, and competitive sealed tenders. <i>The Journal of Finance</i>, 16(1), 8–37. doi:10.1111/j.1540-6261.1961.tb02789.x</li>',
+    '<li>Myerson, R. B. (1981). Optimal auction design. <i>Mathematics of Operations Research</i>, 6(1), 58–73. doi:10.1287/moor.6.1.58</li>',
+    '<li>Milgrom, P. R., & Weber, R. J. (1982). A theory of auctions and competitive bidding. <i>Econometrica</i>, 50(5), 1089–1122. doi:10.2307/1911865</li>',
+    '<li>Ashenfelter, O. (1989). How auctions work for wine and art. <i>Journal of Economic Perspectives</i>, 3(3), 23–36. doi:10.1257/jep.3.3.23</li>',
+    '<li>Che, Y.-K., & Gale, I. (1998). Standard auctions with financially constrained bidders. <i>The Review of Economic Studies</i>, 65(1), 1–21.</li>',
+    '<li>Benoît, J.-P., & Krishna, V. (2001). Multiple-object auctions with budget constrained bidders. <i>The Review of Economic Studies</i>, 68(1), 155–179.</li>',
+    '<li>Krishna, V. (2010). <i>Auction Theory</i> (2ª ed.). Academic Press.</li>',
+    '<li>Comitê do Prêmio Nobel (2020). <i>Improvements to auction theory and inventions of new auction formats</i> (Scientific Background). nobelprize.org.</li>',
+    '<li>Limpert, E., Stahel, W. A., & Abbt, M. (2001). Log-normal distributions across the sciences: keys and clues. <i>BioScience</i>, 51(5), 341–352.</li>',
+    '<li>Robert, C. P., & Casella, G. (2004). <i>Monte Carlo Statistical Methods</i> (2ª ed.). Springer.</li>',
+    '<li>Glasserman, P. (2003). <i>Monte Carlo Methods in Financial Engineering</i>. Springer (cap. 4: redução de variância, números aleatórios comuns).</li>',
+    '<li>Law, A. M. (2015). <i>Simulation Modeling and Analysis</i> (5ª ed.). McGraw-Hill (comparação de sistemas e CRN).</li>',
+    '<li>Saltelli, A. et al. (2008). <i>Global Sensitivity Analysis: The Primer</i>. Wiley.</li>',
+    '<li>Acklam, P. J. Algoritmo para a inversa da distribuição normal (aproximação racional, erro relativo &lt; 1,15×10⁻⁹).</li>',
+    '</ul>',
+    '<p class="muted">Alliance for Coffee Excellence (ACE) e BSCA são citadas apenas como possíveis fontes futuras de informação de contexto. <b>Nenhum dado, preço ou nota dessas instituições foi importado</b>; nenhum valor sintético deve ser atribuído a elas.</p>',
+    '<p class="muted">Simulador v' + E.VERSION + ' · arquivo HTML único, sem dependências externas, sem chamadas de rede (bloqueadas por Content-Security-Policy).</p>'
+  ].join('\n');
+}
+
+/* ============================================================ inicialização */
+function trocarAba(id) {
+  $$('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.tab === id ? 'true' : 'false'); });
+  $$('section.tab').forEach(function (s) { s.classList.toggle('on', s.id === 'tab-' + id); });
+  if (id === 'res' && state.res) desenharGraficos();
+  if (id === 'opt') renderSens();
+}
+function init() {
+  renderControles(); syncTodos(); renderMetodologia(); ligarInventario();
+  $$('nav.tabs button').forEach(function (b) { b.addEventListener('click', function () { trocarAba(b.dataset.tab); }); });
+  $('#btn-full').addEventListener('click', function () { rodarAnalise('completa'); });
+  $('#btn-cancel').addEventListener('click', function () { cancelarJob('ana'); $('#st-reps').textContent = 'Execução cancelada.'; $('#st-bar').style.width = '0'; marcarStale(); status(); });
+  $('#btn-reset').addEventListener('click', function () { if (!confirm('Restaurar todos os parâmetros e o inventário aos valores iniciais?')) return; state.cfg = clone(DEF); syncTodos(); aoMudar(); });
+  $('#btn-save').addEventListener('click', salvarConfig);
+  $('#file-cfg').addEventListener('change', function (ev) {
+    var f = ev.target.files[0]; if (!f) return; ev.target.value = '';
+    var rd = new FileReader(); rd.onload = function () {
+      var r = carregarConfigTexto(String(rd.result));
+      if (r.erros.length) { $('#cfg-msg').innerHTML = '<div class="note crit"><b>Configuração não carregada (' + esc(f.name) + '):</b><ul class="err-list">' + r.erros.slice(0, 20).map(function (e) { return '<li>' + esc(e) + '</li>'; }).join('') + '</ul>A configuração atual foi mantida.</div>'; return; }
+      state.cfg = r.cfg; syncTodos(); aoMudar();
+      $('#cfg-msg').innerHTML = '<div class="note good">Configuração carregada de ' + esc(f.name) + ' (hash ' + state.hash + (r.hashArquivo && r.hashArquivo !== state.hash ? '; o arquivo registrava ' + esc(r.hashArquivo) + ' — valores completados/ajustados' : '') + ').' + (r.avisos.length ? '<ul>' + r.avisos.slice(0, 10).map(function (a) { return '<li>' + esc(a) + '</li>'; }).join('') + '</ul>' : '') + '</div>';
+    }; rd.readAsText(f, 'utf-8');
+  });
+  $('#btn-exp-resumo').addEventListener('click', exportarResumo);
+  $('#btn-exp-varr').addEventListener('click', exportarVarreduras);
+  $('#btn-exp-reps').addEventListener('click', exportarRepeticoes);
+  $('#btn-exp-par').addEventListener('click', exportarParametros);
+  $('#btn-opt').addEventListener('click', rodarOtim);
+  $('#btn-opt-cancel').addEventListener('click', function () { cancelarJob('opt'); $('#opt-prog').textContent = 'Otimização cancelada.'; $('#btn-opt-cancel').disabled = true; $('#btn-opt').disabled = false; });
+  $('#btn-exp-opt').addEventListener('click', exportarOtim);
+  $('#btn-aud').addEventListener('click', rodarAuditoria);
+  $('#aud-lote').addEventListener('change', renderLances);
+  $('#btn-exp-aud').addEventListener('click', function () { exportarAuditoria('lotes'); });
+  $('#btn-exp-aud-l').addEventListener('click', function () { exportarAuditoria('limites'); });
+  window.addEventListener('resize', debounce(function () { if (state.res && $('#tab-res').classList.contains('on')) desenharGraficos(); if (state.res) renderSens(); }, 250));
+  if (window.matchMedia) { var mq = window.matchMedia('(prefers-color-scheme: dark)'); var f = function () { if (state.res) { desenharGraficos(); renderSens(); } }; mq.addEventListener ? mq.addEventListener('change', f) : mq.addListener(f); }
+  aoMudar();
+}
+// API de teste (sem efeito no uso normal)
+window.__app = { state: state, E: E, setParam: function (k, v) { state.cfg[k] = v; syncTodos(); aoMudar(); }, importarInventarioCSV: importarInventarioCSV, carregarConfigTexto: carregarConfigTexto, trocarAba: trocarAba };
+window.__downloads = [];
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
